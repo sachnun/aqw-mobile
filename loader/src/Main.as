@@ -20,6 +20,14 @@ package {
 	[SWF(width="960", height="550", frameRate="600", backgroundColor="#000")]
 	public dynamic class Main extends MovieClip {
 
+		MovieClip.prototype.removeAllChildren = function ():void {
+			var i:int = this.numChildren - 1;
+			while (i >= 0) {
+				this.removeChildAt(i);
+				i--;
+			}
+		};
+
 		private static const GAME_BASE_URL:String = "https://game.aq.com/game/";
 
 		private static const API_VERSION_URL:String = GAME_BASE_URL + "api/data/gameversion";
