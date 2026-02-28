@@ -193,7 +193,9 @@ fn export_bytecode() -> Result<(), Box<dyn Error>> {
 }
 
 fn clear_asset_dir() -> Result<(), Box<dyn Error>> {
+if Path::new("assets").exists() {
     fs::remove_dir_all("assets")?;
+}
 
     fs::create_dir("assets")?;
 
