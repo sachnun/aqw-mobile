@@ -35,7 +35,6 @@ package {
 		private static const TITLE_BASE_URL:String = GAME_BASE_URL + "gamefiles/title/";
 
 		private static const GAME_SWF_PATH:String = "app:/gamefiles/Game.swf";
-		private static const MAPS_PREFIX:String = "maps/http";
 
 		private static const STATE_BACKGROUND:int = 0;
 		private static const STATE_GAME:int = 1;
@@ -116,7 +115,6 @@ package {
 		}
 
 		public function loadMapViaBytes(url:String, context:LoaderContext, onComplete:Function, onProgress:Function = null, onError:Function = null):void {
-			url = sanitizeMapUrl(url);
 			prepareContext(context);
 
 			loadBinary(url,
@@ -282,10 +280,6 @@ package {
 		private static function prepareContext(ctx:LoaderContext):void {
 			ctx.checkPolicyFile = false;
 			ctx.allowCodeImport = true;
-		}
-
-		private static function sanitizeMapUrl(url:String):String {
-			return (url.indexOf(MAPS_PREFIX) == 0) ? url.substring(5) : url;
 		}
 
 		private static function progressPercent(e:ProgressEvent):int {

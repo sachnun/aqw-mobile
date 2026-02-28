@@ -4,9 +4,7 @@
 
       getproperty         Multiname("mobile", [PrivateNamespace(null, "World/instance#0"), PackageNamespace(""), PackageInternalNs(""), PackageNamespace("flash.utils"), Namespace("http://adobe.com/AS3/2006/builtin"), PrivateNamespace(null, "World/instance#1"), PackageNamespace("flash.external"), ProtectedNamespace("World"), StaticProtectedNs("World"), StaticProtectedNs("flash.display:MovieClip"), StaticProtectedNs("flash.display:Sprite"), StaticProtectedNs("flash.display:DisplayObjectContainer"), StaticProtectedNs("flash.display:InteractiveObject"), StaticProtectedNs("flash.display:DisplayObject"), StaticProtectedNs("flash.events:EventDispatcher")])
 
-      pushstring          "maps/"
       getlocal1
-      add
       getlex              QName(PackageNamespace(""), "loaderC")
       getlex              QName(PrivateNamespace(null, "World/instance#0"), "onMapLoadComplete")
       getlex              QName(PrivateNamespace(null, "World/instance#0"), "onMapLoadProgress")
