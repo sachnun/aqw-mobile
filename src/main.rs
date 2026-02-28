@@ -148,31 +148,29 @@ fn apply_patch(patches: &HashMap<String, String>, path: &Path) -> Result<(), Box
 fn load_patch(path: &Path) -> Result<HashMap<String, String>, Box<dyn Error>> {
     let mut patches_files: HashMap<String, String> = HashMap::new();
 
-    for patch_dir in fs::read_dir(path)? {
-        if let Ok(path_target) = patch_dir {
-            if path_target.file_type()?.is_dir() {
-                let patch: ReadDir = fs::read_dir(path_target.path())?;
+    for file in fs::read_dir(path)? {
+        let file = file?;
 
-                let mut find_content: String = String::new();
-                let mut replace_content: String = String::new();
+        let sub_path = file.path();
+    
+        let find_path = sub_path.join("find.txt");
 
-                for patch_files in patch {
-                    if let Ok(file) = patch_files {
-                        match &*file.file_name().to_string_lossy() {
-                            "find.txt" => find_content = fs::read_to_string(file.path())?,
-                            "replace.txt" => replace_content = fs::read_to_string(file.path())?,
-                            _ => {
-                                // Default
-                            }
-                        }
-                    }
-                }
+        if find_path.exists() {
+            let replace_path = sub_path.join("replace.txt");
+            
+            let find_content: String = fs::read_to_string(&find_path)?;
 
-                if !find_content.is_empty() {
-                    patches_files.insert(find_content, replace_content);
-                }
-            } else {
+            if !find_content.is_empty() {
+                patches_files.insert(find_content, if replace_path.exists() {
+                    fs::read_to_string(&replace_path)?
+                } else {
+                    String::new()
+                });
             }
+        }
+
+        if file.file_type()?.is_dir() {
+            patches_files.extend(load_patch(&file.path())?);
         }
     }
 
@@ -193,9 +191,9 @@ fn export_bytecode() -> Result<(), Box<dyn Error>> {
 }
 
 fn clear_asset_dir() -> Result<(), Box<dyn Error>> {
-if Path::new("assets").exists() {
-    fs::remove_dir_all("assets")?;
-}
+    if Path::new("assets").exists() {
+        fs::remove_dir_all("assets")?;
+    }
 
     fs::create_dir("assets")?;
 
