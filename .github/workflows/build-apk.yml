@@ -113,6 +113,11 @@ jobs:
               icons/android-icon-512x512.png \
               gamefiles/Game.swf
 
+      - name: Move latest tag to current commit
+        run: |
+          git tag -f latest
+          git push origin latest --force
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
