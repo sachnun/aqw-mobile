@@ -29,7 +29,6 @@
     <image96x96>icons/android-icon-96x96.png</image96x96>
     <image144x144>icons/android-icon-144x144.png</image144x144>
     <image192x192>icons/android-icon-192x192.png</image192x192>
-    <image512x512>icons/android-icon-512x512.png</image512x512>
   </icon>
   <customUpdateUI>false</customUpdateUI>
   <allowBrowserInvocation>false</allowBrowserInvocation>
