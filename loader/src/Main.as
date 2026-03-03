@@ -21,6 +21,7 @@ package {
 
 	import ui.UpdateBanner;
 	import input.GamePad;
+	import ext.ForegroundService;
 
 	[SWF(width="960", height="550", frameRate="30", backgroundColor="#000")]
 	public dynamic class Main extends MovieClip {
@@ -49,11 +50,18 @@ package {
 		private var titleFile:String;
 		private var backgroundFile:String;
 		private var loadState:int = STATE_BACKGROUND;
+		private var foregroundService:ForegroundService;
 
 		private var container: Sprite = new Sprite();
 
 		public function Main() {
+			foregroundService = new ForegroundService();
+			const foregroundActive:Boolean = foregroundService.start();
+
 			NativeApplication.nativeApplication.systemIdleMode = SystemIdleMode.KEEP_AWAKE;
+			NativeApplication.nativeApplication.autoExit = false;
+			NativeApplication.nativeApplication.executeInBackground = true;
+			NativeApplication.nativeApplication.addEventListener(Event.EXITING, onAppExiting);
 
 			addChild(container);
 
@@ -89,10 +97,21 @@ package {
 			container.addChild(logField);
 
 			log("Init");
+			if (!foregroundActive) {
+				log("Foreground service unavailable");
+			}
 
 			checkForUpdates();
 
 			fetchJSON(Config.API_VERSION_URL, onVersionComplete);
+		}
+
+		private function onAppExiting(e:Event):void {
+			if (foregroundService != null) {
+				foregroundService.stop();
+				foregroundService.dispose();
+				foregroundService = null;
+			}
 		}
 
 		private function log(msg:String):void {
