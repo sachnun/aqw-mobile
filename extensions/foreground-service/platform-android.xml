@@ -2,5 +2,9 @@
     <packagedDependencies>
     </packagedDependencies>
     <packagedResources>
+        <packagedResource>
+            <packageName>com.aqw.foreground</packageName>
+            <folderName>res</folderName>
+        </packagedResource>
     </packagedResources>
 </platform>

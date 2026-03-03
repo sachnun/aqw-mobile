@@ -6,6 +6,7 @@ EXT_DIR="$ROOT_DIR/extensions/foreground-service"
 BUILD_DIR="$EXT_DIR/build"
 ANDROID_CLASSES_DIR="$BUILD_DIR/android/classes"
 ANDROID_DIST_DIR="$BUILD_DIR/android-dist"
+ANDROID_RES_DIR="$EXT_DIR/android/res"
 AIR_HOME="${AIR_HOME:-/usr/local/bin/air_sdk}"
 COMPILER_CLASSPATH="$AIR_HOME/lib/android/FlashRuntimeExtensions.jar"
 ANDROID_JAR="${ANDROID_JAR:-/root/android-sdk/platforms/android-10/android.jar}"
@@ -17,6 +18,11 @@ if [[ ! -f "$ANDROID_JAR" ]]; then
 fi
 
 mkdir -p "$BUILD_DIR/as3/ext" "$ANDROID_CLASSES_DIR" "$ANDROID_DIST_DIR" "$ROOT_DIR/loader/extensions"
+
+rm -rf "$ANDROID_DIST_DIR/res"
+if [[ -d "$ANDROID_RES_DIR" ]]; then
+  cp -R "$ANDROID_RES_DIR" "$ANDROID_DIST_DIR/res"
+fi
 
 cp "$ROOT_DIR/loader/src/ext/ForegroundService.as" "$BUILD_DIR/as3/ext/ForegroundService.as"
 
@@ -56,10 +62,10 @@ cp "$EXT_DIR/platform-android.xml" "$ANDROID_DIST_DIR/platform.xml"
   -swc "$BUILD_DIR/foreground-service.swc" \
   -platform Android-ARM \
   -platformoptions "$ANDROID_DIST_DIR/platform.xml" \
-  -C "$ANDROID_DIST_DIR" foreground-ext.jar library.swf \
+  -C "$ANDROID_DIST_DIR" foreground-ext.jar library.swf res \
   -platform Android-ARM64 \
   -platformoptions "$ANDROID_DIST_DIR/platform.xml" \
-  -C "$ANDROID_DIST_DIR" foreground-ext.jar library.swf
+  -C "$ANDROID_DIST_DIR" foreground-ext.jar library.swf res
 
 cp "$BUILD_DIR/foreground-service.ane" "$ROOT_DIR/loader/extensions/foreground-service.ane"
 echo "Built: loader/extensions/foreground-service.ane"
