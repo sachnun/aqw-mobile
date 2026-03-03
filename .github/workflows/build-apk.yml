@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set version
         id: version
@@ -35,93 +35,48 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
 
       - name: Setup Dlang
-        uses: dlang-community/setup-dlang@v1
+        uses: dlang-community/setup-dlang@v2
+        with:
+          compiler: dmd
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - name: Install Dependencies and Build RABCDAsm
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget unzip git curl liblzma-dev default-jdk
+          sudo apt-get install -y wget unzip git curl liblzma-dev
 
           git clone --depth 1 https://github.com/CyberShadow/RABCDAsm.git
           cd RABCDAsm
           dmd -run build_rabcdasm.d
           sudo cp abcexport rabcdasm rabcasm abcreplace /usr/local/bin/
 
-      - name: Patch Game.swf
-        run: cargo run --release
-
-      - name: Prepare gamefiles
+      - name: Prepare Android platform
         run: |
-          mkdir -p loader/gamefiles
-          cp assets/Game.swf loader/gamefiles/Game.swf
+          ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/bin/sdkmanager"
+          fi
+          "$SDKMANAGER" "platforms;android-34"
+          echo "ANDROID_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar" >> "$GITHUB_ENV"
 
       - name: Setup AIR SDK
-        uses: joshtynjala/setup-adobe-air-action@v2
+        uses: joshtynjala/setup-adobe-air-action@v2.3.0
         with:
           air-version: "51.1"
           accept-license: yes
-
-      - name: Generate temporary keystore
-        run: |
-          keytool -genkeypair \
-            -alias tempalias \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -keystore temp_keystore.jks \
-            -storepass temppass \
-            -keypass temppass \
-            -dname "CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, S=Unknown, C=US"
 
       - name: Inject version into Config.as
         run: |
           sed -i "s/APP_VERSION:String = \".*\"/APP_VERSION:String = \"${{ steps.version.outputs.VERSION }}\"/" loader/src/Config.as
 
-      - name: Compile Loader.swf
-        run: amxmlc -output loader/Loader.swf loader/src/Main.as
-
-      - name: Build APK (armv7)
-        run: |
-          adt -package \
-            -target apk-captive-runtime \
-            -arch armv7 \
-            -storetype JKS \
-            -keystore temp_keystore.jks \
-            -storepass temppass \
-            -keypass temppass \
-            AQWPocket-armv7.apk \
-            loader/app.xml \
-            -C loader \
-              Loader.swf \
-              icons/android-icon-36x36.png \
-              icons/android-icon-48x48.png \
-              icons/android-icon-72x72.png \
-              icons/android-icon-96x96.png \
-              icons/android-icon-144x144.png \
-              icons/android-icon-192x192.png \
-              icons/android-icon-512x512.png \
-              gamefiles/Game.swf
-
-      - name: Build APK (armv8)
-        run: |
-          adt -package \
-            -target apk-captive-runtime \
-            -arch armv8 \
-            -storetype JKS \
-            -keystore temp_keystore.jks \
-            -storepass temppass \
-            -keypass temppass \
-            AQWPocket-armv8.apk \
-            loader/app.xml \
-            -C loader \
-              Loader.swf \
-              icons/android-icon-36x36.png \
-              icons/android-icon-48x48.png \
-              icons/android-icon-72x72.png \
-              icons/android-icon-96x96.png \
-              icons/android-icon-144x144.png \
-              icons/android-icon-192x192.png \
-              gamefiles/Game.swf
+      - name: Build APKs
+        run: ./scripts/build-apk.sh
 
       - name: Tag release
         run: |
