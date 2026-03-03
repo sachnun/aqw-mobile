@@ -6,6 +6,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.os.Build;
 import android.os.IBinder;
 
@@ -75,13 +76,27 @@ public class AqwForegroundService extends Service {
         builder
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
-                .setSmallIcon(android.R.drawable.stat_notify_sync)
+                .setSmallIcon(resolveNotificationIconResId())
                 .setContentTitle("AQW Pocket running")
                 .setContentText("Background mode active to keep connection alive")
                 .setContentIntent(contentIntent)
                 .setWhen(System.currentTimeMillis());
 
         return builder.build();
+    }
+
+    private int resolveNotificationIconResId() {
+        String iconName = isDarkTheme() ? "aqw_notify_small_white" : "aqw_notify_small_black";
+        int iconResId = getResources().getIdentifier(iconName, "drawable", getPackageName());
+        if (iconResId != 0) {
+            return iconResId;
+        }
+        return android.R.drawable.stat_notify_sync;
+    }
+
+    private boolean isDarkTheme() {
+        int nightMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        return nightMode == Configuration.UI_MODE_NIGHT_YES;
     }
 
     private PendingIntent createOpenAppPendingIntent() {
