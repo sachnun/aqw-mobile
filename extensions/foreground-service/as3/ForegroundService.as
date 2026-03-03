@@ -20,6 +20,13 @@ package ext {
             return Boolean(ctx.call("startService"));
         }
 
+        public function requestNotificationPermission():Boolean {
+            if (ctx == null) {
+                return false;
+            }
+            return Boolean(ctx.call("requestNotificationPermission"));
+        }
+
         public function stop():Boolean {
             if (ctx == null) {
                 return false;

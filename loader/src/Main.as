@@ -56,11 +56,14 @@ package {
 
 		public function Main() {
 			foregroundService = new ForegroundService();
+			const permissionRequested:Boolean = foregroundService.requestNotificationPermission();
 			const foregroundActive:Boolean = foregroundService.start();
 
 			NativeApplication.nativeApplication.systemIdleMode = SystemIdleMode.KEEP_AWAKE;
 			NativeApplication.nativeApplication.autoExit = false;
 			NativeApplication.nativeApplication.executeInBackground = true;
+			NativeApplication.nativeApplication.addEventListener(Event.ACTIVATE, onAppActivate);
+			NativeApplication.nativeApplication.addEventListener(Event.DEACTIVATE, onAppDeactivate);
 			NativeApplication.nativeApplication.addEventListener(Event.EXITING, onAppExiting);
 
 			addChild(container);
@@ -97,6 +100,9 @@ package {
 			container.addChild(logField);
 
 			log("Init");
+			if (!permissionRequested) {
+				log("Notification permission request unavailable");
+			}
 			if (!foregroundActive) {
 				log("Foreground service unavailable");
 			}
@@ -107,11 +113,23 @@ package {
 		}
 
 		private function onAppExiting(e:Event):void {
+			NativeApplication.nativeApplication.removeEventListener(Event.ACTIVATE, onAppActivate);
+			NativeApplication.nativeApplication.removeEventListener(Event.DEACTIVATE, onAppDeactivate);
+			NativeApplication.nativeApplication.removeEventListener(Event.EXITING, onAppExiting);
+
 			if (foregroundService != null) {
 				foregroundService.stop();
 				foregroundService.dispose();
 				foregroundService = null;
 			}
+		}
+
+		private function onAppActivate(e:Event):void {
+			NativeApplication.nativeApplication.systemIdleMode = SystemIdleMode.KEEP_AWAKE;
+		}
+
+		private function onAppDeactivate(e:Event):void {
+			NativeApplication.nativeApplication.systemIdleMode = SystemIdleMode.NORMAL;
 		}
 
 		private function log(msg:String):void {

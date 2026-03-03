@@ -14,6 +14,7 @@ public class ForegroundContext extends FREContext {
     @Override
     public Map<String, FREFunction> getFunctions() {
         Map<String, FREFunction> functions = new HashMap<>();
+        functions.put("requestNotificationPermission", new RequestNotificationPermissionFunction());
         functions.put("startService", new StartServiceFunction());
         functions.put("stopService", new StopServiceFunction());
         return functions;

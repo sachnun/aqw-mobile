@@ -2,8 +2,10 @@ package com.aqw.foreground;
 
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.IBinder;
 
@@ -64,6 +66,8 @@ public class AqwForegroundService extends Service {
 
     @SuppressWarnings("deprecation")
     private Notification createNotification() {
+        PendingIntent contentIntent = createOpenAppPendingIntent();
+
         Notification.Builder builder = Build.VERSION.SDK_INT >= 26
                 ? new Notification.Builder(this, CHANNEL_ID)
                 : new Notification.Builder(this);
@@ -74,8 +78,27 @@ public class AqwForegroundService extends Service {
                 .setSmallIcon(android.R.drawable.stat_notify_sync)
                 .setContentTitle("AQW Pocket running")
                 .setContentText("Background mode active to keep connection alive")
+                .setContentIntent(contentIntent)
                 .setWhen(System.currentTimeMillis());
 
         return builder.build();
+    }
+
+    private PendingIntent createOpenAppPendingIntent() {
+        PackageManager packageManager = getPackageManager();
+        Intent launchIntent = packageManager.getLaunchIntentForPackage(getPackageName());
+
+        if (launchIntent == null) {
+            return null;
+        }
+
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= 23) {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+
+        return PendingIntent.getActivity(this, 0, launchIntent, flags);
     }
 }
