@@ -60,6 +60,9 @@ cp assets/Game.swf loader/gamefiles/Game.swf
 # Compile the loader
 amxmlc -output loader/Loader.swf loader/src/Main.as
 
+# Build foreground-service ANE (required for stable background mode)
+./scripts/build-foreground-ane.sh
+
 # Generate a keystore (first time only)
 keytool -genkeypair -alias myalias -keyalg RSA -keysize 2048 -validity 10000 \
   -keystore keystore.jks -storepass yourpass -keypass yourpass \
@@ -69,7 +72,27 @@ keytool -genkeypair -alias myalias -keyalg RSA -keysize 2048 -validity 10000 \
 adt -package -target apk-captive-runtime -arch armv8 \
   -storetype JKS -keystore keystore.jks -storepass yourpass -keypass yourpass \
   AQWPocket.apk loader/app.xml \
+  -extdir loader/extensions \
   -C loader Loader.swf gamefiles/Game.swf
+```
+
+### One-command build
+
+```bash
+./scripts/build-apk.sh
+```
+
+Optional usage:
+
+```bash
+# Build only armv8
+./scripts/build-apk.sh armv8
+
+# Skip patching/downloading latest Game.swf (reuse existing assets/Game.swf)
+SKIP_PATCH=1 ./scripts/build-apk.sh armv8
+
+# Skip ANE rebuild (reuse existing loader/extensions/foreground-service.ane)
+SKIP_ANE=1 ./scripts/build-apk.sh armv8
 ```
 
 Or trigger it manually from the [Actions](../../actions) tab, the APK will be published to the [Releases](../../releases/latest) page automatically.
