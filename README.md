@@ -9,7 +9,10 @@ Get the latest APK from [Releases](../../releases/latest).
 ## Features
 
 - Native Android client (Adobe AIR)
-- On-screen joystick and combat buttons
+- Touch controls (joystick + combat buttons)
+- In-app update checker with release banner
+- Background service support when app is minimized
+- Built-in bot panel with simple farming/QoL modules
 
 ## Build
 
