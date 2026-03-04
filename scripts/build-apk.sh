@@ -24,6 +24,7 @@ KEY_PASS="${KEY_PASS:-$KEYSTORE_PASS}"
 
 SKIP_PATCH="${SKIP_PATCH:-0}"
 SKIP_ANE="${SKIP_ANE:-0}"
+PACKAGE_TARGET="${PACKAGE_TARGET:-apk}"
 
 ARCHES=()
 for arg in "$@"; do
@@ -41,9 +42,13 @@ Usage: ./scripts/build-apk.sh [--skip-patch] [--skip-ane] [armv7] [armv8]
 Options:
   --skip-patch  Skip Game.swf patching step
   --skip-ane    Skip background ANE rebuild step
+  --target-aab  Build AAB instead of APK(s)
   -h, --help    Show this help message
 EOF
       exit 0
+      ;;
+    --target-aab)
+      PACKAGE_TARGET="aab"
       ;;
     armv7|armv8)
       ARCHES+=("$arg")
@@ -198,19 +203,16 @@ if [[ ! -f "$KEYSTORE_PATH" ]]; then
     -dname "CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, S=Unknown, C=US"
 fi
 
-echo "[5/5] Building APK(s)..."
-for arch in "${ARCHES[@]}"; do
-  out_apk="$ROOT_DIR/AQWPocket-${arch}.apk"
-  echo "  - $out_apk"
-
+if [[ "$PACKAGE_TARGET" == "aab" ]]; then
+  echo "[5/5] Building AAB..."
+  out_aab="$ROOT_DIR/AQWPocket.aab"
   "$AIR_HOME/bin/adt" -package \
-    -target apk-captive-runtime \
-    -arch "$arch" \
+    -target aab \
     -storetype JKS \
     -keystore "$KEYSTORE_PATH" \
     -storepass "$KEYSTORE_PASS" \
     -keypass "$KEY_PASS" \
-    "$out_apk" \
+    "$out_aab" \
     "$APP_XML" \
     -extdir "$ROOT_DIR/loader/extensions" \
     -C "$ROOT_DIR/loader" \
@@ -222,9 +224,37 @@ for arch in "${ARCHES[@]}"; do
       icons/android-icon-144x144.png \
       icons/android-icon-192x192.png \
       gamefiles/Game.swf
-done
+  echo "Done. AAB output:"
+  echo "- AQWPocket.aab"
+else
+  echo "[5/5] Building APK(s)..."
+  for arch in "${ARCHES[@]}"; do
+    out_apk="$ROOT_DIR/AQWPocket-${arch}.apk"
+    echo "  - $out_apk"
 
-echo "Done. APK output:"
-for arch in "${ARCHES[@]}"; do
-  echo "- AQWPocket-${arch}.apk"
-done
+    "$AIR_HOME/bin/adt" -package \
+      -target apk-captive-runtime \
+      -arch "$arch" \
+      -storetype JKS \
+      -keystore "$KEYSTORE_PATH" \
+      -storepass "$KEYSTORE_PASS" \
+      -keypass "$KEY_PASS" \
+      "$out_apk" \
+      "$APP_XML" \
+      -extdir "$ROOT_DIR/loader/extensions" \
+      -C "$ROOT_DIR/loader" \
+        Loader.swf \
+        icons/android-icon-36x36.png \
+        icons/android-icon-48x48.png \
+        icons/android-icon-72x72.png \
+        icons/android-icon-96x96.png \
+        icons/android-icon-144x144.png \
+        icons/android-icon-192x192.png \
+        gamefiles/Game.swf
+  done
+
+  echo "Done. APK output:"
+  for arch in "${ARCHES[@]}"; do
+    echo "- AQWPocket-${arch}.apk"
+  done
+fi
