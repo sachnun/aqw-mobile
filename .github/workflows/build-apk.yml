@@ -79,15 +79,15 @@ jobs:
           curl -L -o "$BUNDLETOOL_JAR" "https://github.com/google/bundletool/releases/download/1.18.2/bundletool-all-1.18.2.jar"
 
           java -jar "$BUNDLETOOL_JAR" build-apks \
-            --bundle=AQWPocket.aab \
-            --output=AQWPocket.apks \
+            --bundle=build/AQWPocket.aab \
+            --output=build/AQWPocket.apks \
             --mode=universal \
             --ks=temp_keystore.jks \
             --ks-key-alias=tempalias \
             --ks-pass=pass:temppass \
             --key-pass=pass:temppass
 
-          unzip -p AQWPocket.apks universal.apk > AQWPocket-universal-${{ steps.version.outputs.TAG_VERSION }}.apk
+          unzip -p build/AQWPocket.apks universal.apk > build/AQWPocket-universal-${{ steps.version.outputs.TAG_VERSION }}.apk
 
       - name: Tag release
         run: |
@@ -101,4 +101,4 @@ jobs:
           name: ${{ steps.version.outputs.TAG_VERSION }}
           prerelease: false
           files: |
-            AQWPocket-universal-${{ steps.version.outputs.TAG_VERSION }}.apk
+            build/AQWPocket-universal-${{ steps.version.outputs.TAG_VERSION }}.apk

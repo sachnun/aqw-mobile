@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+OUTPUT_DIR="${OUTPUT_DIR:-$ROOT_DIR/build}"
 AIR_HOME="${AIR_HOME:-/usr/local/bin/air_sdk}"
 EXT_DIR="$ROOT_DIR/extensions/background"
 ANE_BUILD_DIR="$EXT_DIR/build"
@@ -187,6 +188,7 @@ if [[ "$SKIP_ANE" != "1" && ! -f "$ANDROID_JAR" ]]; then
 fi
 
 cd "$ROOT_DIR"
+mkdir -p "$OUTPUT_DIR"
 
 if [[ "$SKIP_PATCH" != "1" ]]; then
   echo "[1/5] Patching latest Game.swf..."
@@ -237,7 +239,7 @@ fi
 
 if [[ "$PACKAGE_TARGET" == "aab" ]]; then
   echo "[5/5] Building AAB..."
-  out_aab="$ROOT_DIR/AQWPocket.aab"
+  out_aab="$OUTPUT_DIR/AQWPocket.aab"
   PLATFORM_SDK="$(resolve_android_sdk_root || true)"
   if [[ -z "$PLATFORM_SDK" ]]; then
     echo "Unable to detect Android SDK root for AAB build."
@@ -264,11 +266,11 @@ if [[ "$PACKAGE_TARGET" == "aab" ]]; then
       gamefiles/Game.swf \
     -platformsdk "$PLATFORM_SDK"
   echo "Done. AAB output:"
-  echo "- AQWPocket.aab"
+  echo "- $out_aab"
 else
   echo "[5/5] Building APK(s)..."
   for arch in "${ARCHES[@]}"; do
-    out_apk="$ROOT_DIR/AQWPocket-${arch}.apk"
+    out_apk="$OUTPUT_DIR/AQWPocket-${arch}.apk"
     echo "  - $out_apk"
 
     "$AIR_HOME/bin/adt" -package \
@@ -294,6 +296,6 @@ else
 
   echo "Done. APK output:"
   for arch in "${ARCHES[@]}"; do
-    echo "- AQWPocket-${arch}.apk"
+    echo "- $OUTPUT_DIR/AQWPocket-${arch}.apk"
   done
 fi
