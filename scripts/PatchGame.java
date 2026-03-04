@@ -12,9 +12,9 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -118,33 +118,35 @@ public class PatchGame {
         return status;
     }
 
+    private static final String PATCH_SEPARATOR = "--- replace";
+
     private static Map<String, String> loadPatch(Path path) throws IOException {
-        Map<String, String> patches = new HashMap<>();
+        Map<String, String> patches = new TreeMap<>();
         if (!Files.exists(path)) {
             return patches;
         }
 
         try (Stream<Path> stream = Files.walk(path)) {
-            List<Path> dirs = stream
-                    .filter(Files::isDirectory)
+            List<Path> files = stream
+                    .filter(Files::isRegularFile)
+                    .filter(file -> file.toString().endsWith(".asasm"))
                     .sorted(Comparator.naturalOrder())
                     .collect(Collectors.toList());
 
-            for (Path dir : dirs) {
-                Path findPath = dir.resolve("find.txt");
-                if (!Files.exists(findPath)) {
+            for (Path file : files) {
+                String content = Files.readString(file, StandardCharsets.UTF_8);
+                int separatorIndex = content.indexOf("\n" + PATCH_SEPARATOR + "\n");
+                if (separatorIndex == -1) {
+                    System.out.println("Skipping (no separator): " + file);
                     continue;
                 }
 
-                String findContent = Files.readString(findPath, StandardCharsets.UTF_8);
+                String findContent = content.substring(0, separatorIndex);
+                String replaceContent = content.substring(separatorIndex + PATCH_SEPARATOR.length() + 2);
+
                 if (findContent.isEmpty()) {
                     continue;
                 }
-
-                Path replacePath = dir.resolve("replace.txt");
-                String replaceContent = Files.exists(replacePath)
-                        ? Files.readString(replacePath, StandardCharsets.UTF_8)
-                        : "";
 
                 patches.put(findContent, replaceContent);
             }
