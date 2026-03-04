@@ -72,6 +72,38 @@ require_cmd() {
   fi
 }
 
+resolve_android_sdk_root() {
+  if [[ -n "${ANDROID_SDK_ROOT:-}" && -d "${ANDROID_SDK_ROOT}" ]]; then
+    printf '%s\n' "${ANDROID_SDK_ROOT}"
+    return
+  fi
+
+  if [[ -n "${ANDROID_JAR:-}" ]]; then
+    local jar_dir
+    local platform_dir
+    local sdk_root
+    jar_dir="$(dirname "${ANDROID_JAR}")"
+    platform_dir="$(dirname "${jar_dir}")"
+    sdk_root="$(dirname "${platform_dir}")"
+    if [[ -d "${sdk_root}" ]]; then
+      printf '%s\n' "${sdk_root}"
+      return
+    fi
+  fi
+
+  if [[ -d "/usr/local/lib/android/sdk" ]]; then
+    printf '%s\n' "/usr/local/lib/android/sdk"
+    return
+  fi
+
+  if [[ -d "/root/android-sdk" ]]; then
+    printf '%s\n' "/root/android-sdk"
+    return
+  fi
+
+  return 1
+}
+
 build_foreground_ane() {
   mkdir -p "$ANE_BUILD_DIR/as3/ext" "$ANDROID_CLASSES_DIR" "$ANDROID_DIST_DIR" "$ROOT_DIR/loader/extensions"
 
@@ -206,6 +238,12 @@ fi
 if [[ "$PACKAGE_TARGET" == "aab" ]]; then
   echo "[5/5] Building AAB..."
   out_aab="$ROOT_DIR/AQWPocket.aab"
+  PLATFORM_SDK="$(resolve_android_sdk_root || true)"
+  if [[ -z "$PLATFORM_SDK" ]]; then
+    echo "Unable to detect Android SDK root for AAB build."
+    echo "Set ANDROID_SDK_ROOT=/path/to/android/sdk and run again."
+    exit 1
+  fi
   "$AIR_HOME/bin/adt" -package \
     -target aab \
     -storetype JKS \
@@ -223,7 +261,8 @@ if [[ "$PACKAGE_TARGET" == "aab" ]]; then
       icons/android-icon-96x96.png \
       icons/android-icon-144x144.png \
       icons/android-icon-192x192.png \
-      gamefiles/Game.swf
+      gamefiles/Game.swf \
+    -platformsdk "$PLATFORM_SDK"
   echo "Done. AAB output:"
   echo "- AQWPocket.aab"
 else
