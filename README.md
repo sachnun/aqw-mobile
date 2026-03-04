@@ -4,8 +4,7 @@ Unofficial AdventureQuest Worlds client for Android.
 
 ## Download
 
-- Get the latest APK from [Releases](../../releases/latest)
-- Use `armv7` for older devices, `armv8` for most modern devices
+Get the latest APK from [Releases](../../releases/latest).
 
 ## Features
 
@@ -38,6 +37,7 @@ Usage: ./scripts/build-apk.sh [--skip-patch] [--skip-ane] [armv7] [armv8]
 Options:
   --skip-patch  Skip Game.swf patching step
   --skip-ane    Skip background ANE rebuild step
+  --target-aab  Build AAB instead of APK(s)
   -h, --help    Show this help message
 ```
 
