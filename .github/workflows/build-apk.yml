@@ -26,12 +26,33 @@ jobs:
       tag_version: ${{ steps.meta.outputs.tag_version }}
       publish_release: ${{ steps.meta.outputs.publish_release }}
     steps:
+      - name: Checkout tags
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
       - name: Compute version and flags
         id: meta
         run: |
-          APP_VERSION="${{ github.event.inputs.version_prefix }}.${{ github.run_number }}"
+          PREFIX="${{ github.event.inputs.version_prefix }}"
+          LATEST_TAG="$(git tag --list "v${PREFIX}.*" | grep -E "^v${PREFIX}\.[0-9]+$" | sort -V | tail -n 1 || true)"
+
+          if [ -n "$LATEST_TAG" ]; then
+            PATCH_NUMBER="${LATEST_TAG##*.}"
+            NEXT_PATCH="$((PATCH_NUMBER + 1))"
+          else
+            NEXT_PATCH="0"
+          fi
+
+          APP_VERSION="${PREFIX}.${NEXT_PATCH}"
           TAG_VERSION="v${APP_VERSION}"
-          PUBLISH_RELEASE="${{ github.event.inputs.publish_release == 'true' }}"
+
+          if [ "${{ github.event.inputs.publish_release }}" = "true" ]; then
+            PUBLISH_RELEASE="true"
+          else
+            PUBLISH_RELEASE="false"
+          fi
 
           echo "app_version=${APP_VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag_version=${TAG_VERSION}" >> "$GITHUB_OUTPUT"
