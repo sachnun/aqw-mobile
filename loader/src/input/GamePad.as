@@ -29,6 +29,7 @@ package input {
 		private var gearBtn:Sprite;
 		private var dropdown:Sprite;
 		private var dropdownOpen:Boolean = false;
+		private var joystickActive:Boolean = false;
 
 		private function buildGearMenu():void {
 			gearBtn = new Sprite();
@@ -239,21 +240,24 @@ package input {
 			}
 
 			if (joystick.hitTest(e.stageX, e.stageY)) {
+				joystickActive = true;
 				joystick.move(e.stageX, e.stageY);
 				stage.addEventListener(Event.ENTER_FRAME, onEnterFrame);
 			}
 		}
 
 		private function onMove(e:MouseEvent):void {
-			if (joystick.dirX != 0 || joystick.dirY != 0) {
+			if (joystickActive) {
 				joystick.move(e.stageX, e.stageY);
 			}
 		}
 
 		private function onUp(e:MouseEvent):void {
-			if (joystick.dirX == 0 && joystick.dirY == 0) {
+			if (!joystickActive) {
 				return;
 			}
+
+			joystickActive = false;
 
 			joystick.snapHome();
 
@@ -268,4 +272,3 @@ package input {
 
 	}
 }
-
