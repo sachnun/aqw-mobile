@@ -10,6 +10,8 @@ package {
 	import flash.events.IOErrorEvent;
 	import flash.events.KeyboardEvent;
 	import flash.events.ProgressEvent;
+	import flash.media.SoundMixer;
+	import flash.media.SoundTransform;
 	import flash.net.URLLoader;
 	import flash.net.URLLoaderDataFormat;
 	import flash.net.URLRequest;
@@ -56,6 +58,8 @@ package {
 		private var loadState:int = STATE_BACKGROUND;
 		private var foregroundService:ForegroundService;
 		private var lastBackPressAt:int = -BACK_EXIT_WINDOW_MS;
+		private var backgroundAudioMuted:Boolean = false;
+		private var masterVolumeBeforeBackground:Number = 1.0;
 
 		private var container: Sprite = new Sprite();
 
@@ -136,10 +140,31 @@ package {
 
 		private function onAppActivate(e:Event):void {
 			NativeApplication.nativeApplication.systemIdleMode = SystemIdleMode.KEEP_AWAKE;
+			restoreAudioAfterForeground();
 		}
 
 		private function onAppDeactivate(e:Event):void {
 			NativeApplication.nativeApplication.systemIdleMode = SystemIdleMode.NORMAL;
+			muteAudioForBackground();
+		}
+
+		private function muteAudioForBackground():void {
+			if (backgroundAudioMuted) {
+				return;
+			}
+
+			masterVolumeBeforeBackground = SoundMixer.soundTransform.volume;
+			SoundMixer.soundTransform = new SoundTransform(0);
+			backgroundAudioMuted = true;
+		}
+
+		private function restoreAudioAfterForeground():void {
+			if (!backgroundAudioMuted) {
+				return;
+			}
+
+			SoundMixer.soundTransform = new SoundTransform(masterVolumeBeforeBackground);
+			backgroundAudioMuted = false;
 		}
 
 		private function onAddedToStage(e:Event):void {
