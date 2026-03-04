@@ -10,7 +10,6 @@ Get the latest APK from [Releases](../../releases/latest).
 
 - Native Android client (Adobe AIR)
 - On-screen joystick and combat buttons
-- Auto update check from GitHub releases
 
 ## Build
 
@@ -19,7 +18,10 @@ Requirements:
 - [DMD](https://dlang.org/download.html)
 - [RABCDAsm](https://github.com/CyberShadow/RABCDAsm)
 - [Adobe AIR SDK (51.1+)](https://airsdk.harman.com/download)
-- [Java](https://adoptium.net/temurin/releases/)
+- [Java JDK](https://www.oracle.com/java/technologies/downloads/)
+- [Android SDK Command-line Tools](https://developer.android.com/studio#command-tools)
+  - Install packages: `platform-tools`, `platforms;android-34`, `build-tools;34.0.0`
+  - Set `ANDROID_JAR` (for ANE build) and `ANDROID_SDK_ROOT` (for AAB build)
 
 Quick build:
 
