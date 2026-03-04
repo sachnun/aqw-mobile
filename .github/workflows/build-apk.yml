@@ -4,27 +4,59 @@ on:
   workflow_dispatch:
     inputs:
       version_prefix:
-        description: 'Version prefix (e.g. 1.0, 1.1, 2.0)'
+        description: "Version prefix (e.g. 1.0, 1.1, 2.0)"
         required: false
-        default: '1.0'
+        default: "1.0"
+      publish_release:
+        description: "Create git tag and GitHub release"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: build-apk-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
+  prepare:
+    name: Prepare Metadata
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    outputs:
+      app_version: ${{ steps.meta.outputs.app_version }}
+      tag_version: ${{ steps.meta.outputs.tag_version }}
+      publish_release: ${{ steps.meta.outputs.publish_release }}
+    steps:
+      - name: Compute version and flags
+        id: meta
+        run: |
+          APP_VERSION="${{ github.event.inputs.version_prefix }}.${{ github.run_number }}"
+          TAG_VERSION="v${APP_VERSION}"
+          PUBLISH_RELEASE="${{ github.event.inputs.publish_release == 'true' }}"
 
+          echo "app_version=${APP_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag_version=${TAG_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "publish_release=${PUBLISH_RELEASE}" >> "$GITHUB_OUTPUT"
+
+  build_universal:
+    name: Build Universal APK
+    runs-on: ubuntu-latest
+    needs: prepare
+    permissions:
+      contents: read
+    outputs:
+      artifact_name: ${{ steps.meta.outputs.artifact_name }}
+      apk_name: ${{ steps.meta.outputs.apk_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Set version
-        id: version
+      - name: Set output names
+        id: meta
         run: |
-          APP_VERSION="${{ github.event.inputs.version_prefix }}.${{ github.run_number }}"
-          TAG_VERSION="v${APP_VERSION}"
-          echo "APP_VERSION=${APP_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "TAG_VERSION=${TAG_VERSION}" >> "$GITHUB_OUTPUT"
+          APK_NAME="AQWPocket-universal-${{ needs.prepare.outputs.tag_version }}.apk"
+          ARTIFACT_NAME="universal-apk-${{ needs.prepare.outputs.tag_version }}"
+          echo "apk_name=${APK_NAME}" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=${ARTIFACT_NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Setup Dlang
         uses: dlang-community/setup-dlang@v2
@@ -35,17 +67,30 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
-      - name: Install Dependencies and Build RABCDAsm
+      - name: Restore RABCDAsm cache
+        id: rabcdasm-cache
+        uses: actions/cache@v4
+        with:
+          path: .cache-tools/rabcdasm/bin
+          key: rabcdasm-${{ runner.os }}-dmd2.112.0-v1
+
+      - name: Build and cache RABCDAsm
+        if: steps.rabcdasm-cache.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget unzip git curl liblzma-dev
+          sudo apt-get install -y git liblzma-dev
 
+          rm -rf RABCDAsm
           git clone --depth 1 https://github.com/CyberShadow/RABCDAsm.git
-          cd RABCDAsm
-          dmd -run build_rabcdasm.d
-          sudo cp abcexport rabcdasm rabcasm abcreplace /usr/local/bin/
+          dmd -run RABCDAsm/build_rabcdasm.d
+
+          mkdir -p .cache-tools/rabcdasm/bin
+          cp RABCDAsm/abcexport RABCDAsm/rabcdasm RABCDAsm/rabcasm RABCDAsm/abcreplace .cache-tools/rabcdasm/bin/
+
+      - name: Add RABCDAsm to PATH
+        run: echo "${GITHUB_WORKSPACE}/.cache-tools/rabcdasm/bin" >> "$GITHUB_PATH"
 
       - name: Prepare Android platform
         run: |
@@ -61,25 +106,58 @@ jobs:
       - name: Setup AIR SDK
         uses: joshtynjala/setup-adobe-air-action@v2.3.0
         with:
-          air-version: "51.1"
+          air-version: "51.1.4.1"
           accept-license: yes
 
-      - name: Inject version into Config.as
+      - name: Inject version into source files
         run: |
-          sed -i "s/APP_VERSION:String = \".*\"/APP_VERSION:String = \"${{ steps.version.outputs.TAG_VERSION }}\"/" loader/src/Config.as
-          sed -i "s|<versionNumber>.*</versionNumber>|<versionNumber>${{ steps.version.outputs.APP_VERSION }}</versionNumber>|" loader/app.xml
-          sed -i "s|<versionLabel>.*</versionLabel>|<versionLabel>${{ steps.version.outputs.TAG_VERSION }}</versionLabel>|" loader/app.xml
+          sed -i "s/APP_VERSION:String = \".*\"/APP_VERSION:String = \"${{ needs.prepare.outputs.tag_version }}\"/" loader/src/Config.as
+          sed -i "s|<versionNumber>.*</versionNumber>|<versionNumber>${{ needs.prepare.outputs.app_version }}</versionNumber>|" loader/app.xml
+          sed -i "s|<versionLabel>.*</versionLabel>|<versionLabel>${{ needs.prepare.outputs.tag_version }}</versionLabel>|" loader/app.xml
 
       - name: Build AAB
         run: ./scripts/build-apk.sh --target-aab
 
-      - name: Build universal APK from AAB
+      - name: Normalize AAB native library compression
         run: |
-          BUNDLETOOL_JAR="bundletool.jar"
-          curl -L -o "$BUNDLETOOL_JAR" "https://github.com/google/bundletool/releases/download/1.18.2/bundletool-all-1.18.2.jar"
+          python - <<'PY'
+          import zipfile
 
-          java -jar "$BUNDLETOOL_JAR" build-apks \
-            --bundle=build/AQWPocket.aab \
+          src = "build/AQWPocket.aab"
+          dst = "build/AQWPocket-normalized.aab"
+
+          with zipfile.ZipFile(src, "r") as zin, zipfile.ZipFile(dst, "w") as zout:
+              for info in zin.infolist():
+                  data = zin.read(info.filename)
+                  out = zipfile.ZipInfo(info.filename)
+                  out.date_time = info.date_time
+                  out.comment = info.comment
+                  out.extra = info.extra
+                  out.internal_attr = info.internal_attr
+                  out.external_attr = info.external_attr
+                  out.create_system = info.create_system
+                  out.flag_bits = info.flag_bits
+                  out.compress_type = zipfile.ZIP_DEFLATED if info.filename.endswith(".so") else info.compress_type
+                  zout.writestr(out, data)
+          PY
+
+      - name: Restore bundletool cache
+        id: bundletool-cache
+        uses: actions/cache@v4
+        with:
+          path: .cache-tools/bundletool/bundletool-all-1.18.2.jar
+          key: bundletool-1.18.2
+
+      - name: Download bundletool
+        if: steps.bundletool-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .cache-tools/bundletool
+          curl -L -o .cache-tools/bundletool/bundletool-all-1.18.2.jar "https://github.com/google/bundletool/releases/download/1.18.2/bundletool-all-1.18.2.jar"
+
+      - name: Build universal APK from normalized AAB
+        run: |
+          java -jar .cache-tools/bundletool/bundletool-all-1.18.2.jar build-apks \
+            --bundle=build/AQWPocket-normalized.aab \
             --output=build/AQWPocket.apks \
             --mode=universal \
             --ks=temp_keystore.jks \
@@ -87,18 +165,74 @@ jobs:
             --ks-pass=pass:temppass \
             --key-pass=pass:temppass
 
-          unzip -p build/AQWPocket.apks universal.apk > build/AQWPocket-universal-${{ steps.version.outputs.TAG_VERSION }}.apk
+          unzip -p build/AQWPocket.apks universal.apk > "build/${{ steps.meta.outputs.apk_name }}"
+          rm -f build/AQWPocket.apks build/AQWPocket-normalized.aab
+
+      - name: Upload universal APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.artifact_name }}
+          path: build/${{ steps.meta.outputs.apk_name }}
+          if-no-files-found: error
+
+  inspect_artifact:
+    name: Inspect Artifact
+    runs-on: ubuntu-latest
+    needs: [prepare, build_universal]
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build_universal.outputs.artifact_name }}
+          path: build
+
+      - name: Print APK size and native library compression
+        run: |
+          python - <<'PY'
+          import os
+          import zipfile
+
+          apk = "build/${{ needs.build_universal.outputs.apk_name }}"
+          size_mb = os.path.getsize(apk) / (1024 * 1024)
+          print(f"APK: {apk}")
+          print(f"Size: {size_mb:.2f} MiB")
+
+          with zipfile.ZipFile(apk) as z:
+              libs = [i for i in z.infolist() if i.filename.startswith("lib/") and i.filename.endswith(".so")]
+          for i in sorted(libs, key=lambda x: x.file_size, reverse=True):
+              method = "STORED" if i.compress_type == zipfile.ZIP_STORED else "DEFLATED"
+              print(f"{i.filename}: {method} ({i.compress_size}/{i.file_size})")
+          PY
+
+  release:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    needs: [prepare, build_universal, inspect_artifact]
+    if: needs.prepare.outputs.publish_release == 'true'
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build_universal.outputs.artifact_name }}
+          path: build
 
       - name: Tag release
         run: |
-          git tag -f ${{ steps.version.outputs.TAG_VERSION }}
-          git push origin ${{ steps.version.outputs.TAG_VERSION }} --force
+          git tag -f ${{ needs.prepare.outputs.tag_version }}
+          git push origin ${{ needs.prepare.outputs.tag_version }} --force
 
-      - name: Release
+      - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.TAG_VERSION }}
-          name: ${{ steps.version.outputs.TAG_VERSION }}
+          tag_name: ${{ needs.prepare.outputs.tag_version }}
+          name: ${{ needs.prepare.outputs.tag_version }}
           prerelease: false
           files: |
-            build/AQWPocket-universal-${{ steps.version.outputs.TAG_VERSION }}.apk
+            build/${{ needs.build_universal.outputs.apk_name }}
