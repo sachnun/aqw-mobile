@@ -96,7 +96,7 @@ PY
   cp "$ANE_BUILD_DIR/background.ane" "$ROOT_DIR/loader/extensions/background.ane"
 }
 
-require_cmd cargo
+require_cmd java
 require_cmd keytool
 require_cmd javac
 require_cmd jar
@@ -123,7 +123,7 @@ cd "$ROOT_DIR"
 
 if [[ "$SKIP_PATCH" != "1" ]]; then
   echo "[1/5] Patching latest Game.swf..."
-  cargo run --release
+  java scripts/PatchGame.java
 else
   echo "[1/5] Skip patch step (SKIP_PATCH=1)"
 fi
