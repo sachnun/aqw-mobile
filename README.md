@@ -26,8 +26,8 @@ Requirements:
 Quick build:
 
 ```bash
-git clone https://github.com/sachnun/aqw-mobile.git
-cd aqw-mobile
+git clone https://github.com/sachnun/aqw-pocket.git
+cd aqw-pocket
 ./scripts/build-apk.sh
 ```
 

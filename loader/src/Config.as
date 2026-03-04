@@ -11,7 +11,7 @@ package {
 
 		public static const APP_VERSION:String = "v1.0.0";
 
-		public static const GITHUB_RELEASES_URL:String = "https://api.github.com/repos/anthony-hyo/aqw-mobile/releases/latest";
+		public static const GITHUB_RELEASES_URL:String = "https://api.github.com/repos/sachnun/aqw-pocket/releases/latest";
 
     }
 

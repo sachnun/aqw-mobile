@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "aqw-mobile"
+name = "aqw-pocket"
 version = "0.1.0"
 dependencies = [
  "reqwest",
