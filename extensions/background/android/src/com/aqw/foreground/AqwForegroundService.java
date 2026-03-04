@@ -23,7 +23,7 @@ public class AqwForegroundService extends Service {
         ensureChannelIfNeeded();
         Notification notification = createNotification();
         startForeground(NOTIFICATION_ID, notification);
-        return START_STICKY;
+        return START_NOT_STICKY;
     }
 
     @Override
