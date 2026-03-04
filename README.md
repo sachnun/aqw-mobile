@@ -2,8 +2,6 @@
 
 Unofficial AdventureQuest Worlds client for Android.
 
-> Unofficial community project. Not affiliated with Artix Entertainment.
-
 ## Download
 
 - Get the latest APK from [Releases](../../releases/latest)
