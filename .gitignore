@@ -1,7 +1,10 @@
 /target
+/build
 /assets
 .vscode/settings.json
 *.apk
+*.aab
+*.apks
 temp_keystore.jks
 extensions/background/build/
 loader/Loader.swf
