@@ -20,7 +20,11 @@ jobs:
 
       - name: Set version
         id: version
-        run: echo "VERSION=v${{ github.event.inputs.version_prefix }}.${{ github.run_number }}" >> $GITHUB_OUTPUT
+        run: |
+          APP_VERSION="${{ github.event.inputs.version_prefix }}.${{ github.run_number }}"
+          TAG_VERSION="v${APP_VERSION}"
+          echo "APP_VERSION=${APP_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "TAG_VERSION=${TAG_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Setup Dlang
         uses: dlang-community/setup-dlang@v2
@@ -61,21 +65,23 @@ jobs:
 
       - name: Inject version into Config.as
         run: |
-          sed -i "s/APP_VERSION:String = \".*\"/APP_VERSION:String = \"${{ steps.version.outputs.VERSION }}\"/" loader/src/Config.as
+          sed -i "s/APP_VERSION:String = \".*\"/APP_VERSION:String = \"${{ steps.version.outputs.TAG_VERSION }}\"/" loader/src/Config.as
+          sed -i "s|<versionNumber>.*</versionNumber>|<versionNumber>${{ steps.version.outputs.APP_VERSION }}</versionNumber>|" loader/app.xml
+          sed -i "s|<versionLabel>.*</versionLabel>|<versionLabel>${{ steps.version.outputs.TAG_VERSION }}</versionLabel>|" loader/app.xml
 
       - name: Build APKs
         run: ./scripts/build-apk.sh
 
       - name: Tag release
         run: |
-          git tag -f ${{ steps.version.outputs.VERSION }}
-          git push origin ${{ steps.version.outputs.VERSION }} --force
+          git tag -f ${{ steps.version.outputs.TAG_VERSION }}
+          git push origin ${{ steps.version.outputs.TAG_VERSION }} --force
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.VERSION }}
-          name: ${{ steps.version.outputs.VERSION }}
+          tag_name: ${{ steps.version.outputs.TAG_VERSION }}
+          name: ${{ steps.version.outputs.TAG_VERSION }}
           prerelease: false
           files: |
             AQWPocket-armv7.apk
