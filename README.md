@@ -17,11 +17,11 @@ Unofficial AdventureQuest Worlds client for Android.
 
 Requirements:
 
-- Rust
-- DMD
-- RABCDAsm
-- Adobe AIR SDK (51.1+)
-- Java
+- [Rust](https://www.rust-lang.org/tools/install)
+- [DMD](https://dlang.org/download.html)
+- [RABCDAsm](https://github.com/CyberShadow/RABCDAsm)
+- [Adobe AIR SDK (51.1+)](https://airsdk.harman.com/download)
+- [Java](https://adoptium.net/temurin/releases/)
 
 Quick build:
 
