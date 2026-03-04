@@ -10,7 +10,7 @@ ANDROID_CLASSES_DIR="$ANE_BUILD_DIR/android/classes"
 ANDROID_DIST_DIR="$ANE_BUILD_DIR/android-dist"
 ANDROID_RES_DIR="$EXT_DIR/android/res"
 COMPILER_CLASSPATH="$AIR_HOME/lib/android/FlashRuntimeExtensions.jar"
-ANDROID_JAR="${ANDROID_JAR:-/root/android-sdk/platforms/android-10/android.jar}"
+ANDROID_JAR="${ANDROID_JAR:-/root/android-sdk/platforms/android-34/android.jar}"
 
 APP_XML="$ROOT_DIR/loader/app.xml"
 LOADER_SWF="$ROOT_DIR/loader/Loader.swf"
