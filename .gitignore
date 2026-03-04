@@ -3,7 +3,7 @@
 .vscode/settings.json
 *.apk
 temp_keystore.jks
-extensions/foreground-service/build/
+extensions/background/build/
 loader/Loader.swf
 loader/gamefiles/
 loader/extensions/*.ane

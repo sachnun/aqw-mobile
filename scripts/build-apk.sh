@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 AIR_HOME="${AIR_HOME:-/usr/local/bin/air_sdk}"
-EXT_DIR="$ROOT_DIR/extensions/foreground-service"
+EXT_DIR="$ROOT_DIR/extensions/background"
 ANE_BUILD_DIR="$EXT_DIR/build"
 ANDROID_CLASSES_DIR="$ANE_BUILD_DIR/android/classes"
 ANDROID_DIST_DIR="$ANE_BUILD_DIR/android-dist"
@@ -15,7 +15,7 @@ APP_XML="$ROOT_DIR/loader/app.xml"
 LOADER_SWF="$ROOT_DIR/loader/Loader.swf"
 GAME_SWF="$ROOT_DIR/assets/Game.swf"
 GAME_SWF_IN_LOADER="$ROOT_DIR/loader/gamefiles/Game.swf"
-ANE_PATH="$ROOT_DIR/loader/extensions/foreground-service.ane"
+ANE_PATH="$ROOT_DIR/loader/extensions/background.ane"
 
 KEYSTORE_PATH="${KEYSTORE_PATH:-$ROOT_DIR/temp_keystore.jks}"
 KEY_ALIAS="${KEY_ALIAS:-tempalias}"
@@ -51,7 +51,7 @@ build_foreground_ane() {
     -source-path "$ANE_BUILD_DIR/as3" \
     -include-classes ext.ForegroundService \
     -swf-version=23 \
-    -output "$ANE_BUILD_DIR/foreground-service.swc"
+    -output "$ANE_BUILD_DIR/background.swc"
 
   javac --release 8 \
     -cp "$ANDROID_JAR:$COMPILER_CLASSPATH" \
@@ -60,7 +60,7 @@ build_foreground_ane() {
 
   jar cf "$ANE_BUILD_DIR/foreground-ext.jar" -C "$ANDROID_CLASSES_DIR" .
 
-  PY_SWC="$ANE_BUILD_DIR/foreground-service.swc" \
+  PY_SWC="$ANE_BUILD_DIR/background.swc" \
   PY_LIB_SWF="$ANDROID_DIST_DIR/library.swf" \
   python - <<'PY'
 import os
@@ -83,9 +83,9 @@ PY
   cp "$EXT_DIR/platform-android.xml" "$ANDROID_DIST_DIR/platform.xml"
 
   "$AIR_HOME/bin/adt" -package -target ane \
-    "$ANE_BUILD_DIR/foreground-service.ane" \
+    "$ANE_BUILD_DIR/background.ane" \
     "$ANE_BUILD_DIR/extension.xml" \
-    -swc "$ANE_BUILD_DIR/foreground-service.swc" \
+    -swc "$ANE_BUILD_DIR/background.swc" \
     -platform Android-ARM \
     -platformoptions "$ANDROID_DIST_DIR/platform.xml" \
     -C "$ANDROID_DIST_DIR" foreground-ext.jar library.swf res \
@@ -93,7 +93,7 @@ PY
     -platformoptions "$ANDROID_DIST_DIR/platform.xml" \
     -C "$ANDROID_DIST_DIR" foreground-ext.jar library.swf res
 
-  cp "$ANE_BUILD_DIR/foreground-service.ane" "$ROOT_DIR/loader/extensions/foreground-service.ane"
+  cp "$ANE_BUILD_DIR/background.ane" "$ROOT_DIR/loader/extensions/background.ane"
 }
 
 require_cmd cargo
@@ -138,7 +138,7 @@ mkdir -p "$ROOT_DIR/loader/gamefiles"
 cp "$GAME_SWF" "$GAME_SWF_IN_LOADER"
 
 if [[ "$SKIP_ANE" != "1" ]]; then
-  echo "[3/5] Building foreground-service ANE..."
+  echo "[3/5] Building background ANE..."
   build_foreground_ane
 else
   echo "[3/5] Skip ANE rebuild (SKIP_ANE=1)"
