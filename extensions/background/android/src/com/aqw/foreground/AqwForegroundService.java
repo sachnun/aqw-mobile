@@ -15,15 +15,19 @@ import java.lang.reflect.Method;
 
 public class AqwForegroundService extends Service {
     public static final String ACTION_START = "com.aqw.foreground.START";
+    public static final String ACTION_NOTIFICATION_DISMISSED = "com.aqw.foreground.NOTIFICATION_DISMISSED";
+    public static final String ACTION_EXIT = "com.aqw.foreground.EXIT";
     private static final String CHANNEL_ID = "aqw_pocket_foreground";
     private static final int NOTIFICATION_ID = 777001;
+    private static volatile boolean keepNotificationPersistent = false;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        keepNotificationPersistent = true;
         ensureChannelIfNeeded();
         Notification notification = createNotification();
         startForeground(NOTIFICATION_ID, notification);
-        return START_NOT_STICKY;
+        return START_STICKY;
     }
 
     @Override
@@ -35,6 +39,14 @@ public class AqwForegroundService extends Service {
     public void onDestroy() {
         stopForeground(true);
         super.onDestroy();
+    }
+
+    public static void disablePersistentNotification() {
+        keepNotificationPersistent = false;
+    }
+
+    public static boolean shouldKeepNotificationPersistent() {
+        return keepNotificationPersistent;
     }
 
     private void ensureChannelIfNeeded() {
@@ -80,6 +92,8 @@ public class AqwForegroundService extends Service {
                 .setContentTitle("AQW Pocket running")
                 .setContentText("Background mode active to keep connection alive")
                 .setContentIntent(contentIntent)
+                .setDeleteIntent(createDismissedPendingIntent())
+                .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Exit", createExitPendingIntent())
                 .setWhen(System.currentTimeMillis());
 
         return builder.build();
@@ -115,5 +129,29 @@ public class AqwForegroundService extends Service {
         }
 
         return PendingIntent.getActivity(this, 0, launchIntent, flags);
+    }
+
+    private PendingIntent createDismissedPendingIntent() {
+        Intent dismissedIntent = new Intent(this, NotificationDismissedReceiver.class);
+        dismissedIntent.setAction(ACTION_NOTIFICATION_DISMISSED);
+
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= 23) {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+
+        return PendingIntent.getBroadcast(this, 1, dismissedIntent, flags);
+    }
+
+    private PendingIntent createExitPendingIntent() {
+        Intent exitIntent = new Intent(this, NotificationDismissedReceiver.class);
+        exitIntent.setAction(ACTION_EXIT);
+
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= 23) {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+
+        return PendingIntent.getBroadcast(this, 2, exitIntent, flags);
     }
 }

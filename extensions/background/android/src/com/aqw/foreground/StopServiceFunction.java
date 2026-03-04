@@ -12,6 +12,7 @@ public class StopServiceFunction implements FREFunction {
     public FREObject call(FREContext context, FREObject[] args) {
         try {
             Context appContext = context.getActivity().getApplicationContext();
+            AqwForegroundService.disablePersistentNotification();
             Intent intent = new Intent(appContext, AqwForegroundService.class);
             appContext.stopService(intent);
             return FREObject.newObject(true);
