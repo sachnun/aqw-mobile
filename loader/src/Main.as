@@ -27,6 +27,7 @@ package {
 	import ui.UpdateBanner;
 	import input.GamePad;
 	import ext.ForegroundService;
+	import bot.BotController;
 
 	[SWF(width="960", height="550", frameRate="30", backgroundColor="#000")]
 	public dynamic class Main extends MovieClip {
@@ -340,6 +341,9 @@ package {
 			stage.removeChild(DisplayObject(this));
 
 			gameMovieClip.addChild(new GamePad(gameMovieClip));
+
+			BotController.init(gameMovieClip, stage);
+			log("Bot controller initialized");
 		}
 
 		private function checkForUpdates():void {

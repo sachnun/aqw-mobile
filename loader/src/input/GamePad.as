@@ -6,6 +6,8 @@ package input {
 
 	import ui.Layout;
 	import ui.SkillBar;
+	import bot.ui.BotPanel;
+	import bot.ui.CellPanel;
 
 	public class GamePad extends Sprite {
 
@@ -26,6 +28,8 @@ package input {
 		private var walkCtrl:WalkController;
 		private var skillBar:SkillBar;
 		private var layout:Layout;
+		private var botPanel:BotPanel;
+		private var cellPanel:CellPanel;
 		private var gearBtn:Sprite;
 		private var dropdown:Sprite;
 		private var dropdownOpen:Boolean = false;
@@ -59,6 +63,14 @@ package input {
 				{
 					label: "Hide UI",
 					fn: doHideUI
+				},
+				{
+					label: "Bot Panel",
+					fn: doBotPanel
+				},
+				{
+					label: "Cell Jump",
+					fn: doCellJump
 				},
 				{
 					label: "Edit Layout",
@@ -165,13 +177,34 @@ package input {
 		private function doEditLayout():void {
 			layout.toggleEdit();
 
-			const row:Sprite = Sprite(dropdown.getChildAt(1));
+			const row:Sprite = Sprite(dropdown.getChildAt(3));
 			const tf:TextField = TextField(row.getChildAt(1));
 			tf.text = layout.editMode ? "Save Layout" : "Edit Layout";
 		}
 
 		private function doResetLayout():void {
 			layout.resetToDefaults();
+		}
+
+		private function doBotPanel():void {
+			if (botPanel == null) {
+				botPanel = new BotPanel();
+				botPanel.visible = false;
+				addChild(botPanel);
+			}
+			botPanel.visible = !botPanel.visible;
+		}
+
+		private function doCellJump():void {
+			if (cellPanel == null) {
+				cellPanel = new CellPanel();
+				cellPanel.visible = false;
+				addChild(cellPanel);
+			}
+			cellPanel.visible = !cellPanel.visible;
+			if (cellPanel.visible) {
+				cellPanel.refresh();
+			}
 		}
 
 		private function makeLabel(text:String, color:uint, size:int, bold:Boolean = false):TextField {
