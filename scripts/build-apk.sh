@@ -25,7 +25,37 @@ KEY_PASS="${KEY_PASS:-$KEYSTORE_PASS}"
 SKIP_PATCH="${SKIP_PATCH:-0}"
 SKIP_ANE="${SKIP_ANE:-0}"
 
-ARCHES=("$@")
+ARCHES=()
+for arg in "$@"; do
+  case "$arg" in
+    --skip-patch)
+      SKIP_PATCH=1
+      ;;
+    --skip-ane)
+      SKIP_ANE=1
+      ;;
+    -h|--help)
+      cat <<'EOF'
+Usage: ./scripts/build-apk.sh [--skip-patch] [--skip-ane] [armv7] [armv8]
+
+Options:
+  --skip-patch  Skip Game.swf patching step
+  --skip-ane    Skip background ANE rebuild step
+  -h, --help    Show this help message
+EOF
+      exit 0
+      ;;
+    armv7|armv8)
+      ARCHES+=("$arg")
+      ;;
+    *)
+      echo "Unknown argument: $arg"
+      echo "Use --help to see available options."
+      exit 1
+      ;;
+  esac
+done
+
 if [[ ${#ARCHES[@]} -eq 0 ]]; then
   ARCHES=(armv7 armv8)
 fi
@@ -125,7 +155,7 @@ if [[ "$SKIP_PATCH" != "1" ]]; then
   echo "[1/5] Patching latest Game.swf..."
   java scripts/PatchGame.java
 else
-  echo "[1/5] Skip patch step (SKIP_PATCH=1)"
+  echo "[1/5] Skip patch step (--skip-patch / SKIP_PATCH=1)"
 fi
 
 if [[ ! -f "$GAME_SWF" ]]; then
@@ -141,7 +171,7 @@ if [[ "$SKIP_ANE" != "1" ]]; then
   echo "[3/5] Building background ANE..."
   build_foreground_ane
 else
-  echo "[3/5] Skip ANE rebuild (SKIP_ANE=1)"
+  echo "[3/5] Skip ANE rebuild (--skip-ane / SKIP_ANE=1)"
 fi
 
 if [[ ! -f "$ANE_PATH" ]]; then
