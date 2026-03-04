@@ -28,10 +28,13 @@ package ui {
 		private var game:MovieClip;
 		private var btns:Vector.<AttackButton> = new Vector.<AttackButton>();
 		private var skillByBtn:Dictionary = new Dictionary(true);
+		private var btnBySkill:Object = {};
 		private var autoBtn:AttackButton;
 		private var autoActive:Boolean = false;
 		private var autoTimer:Timer;
 		private var autoSkillIndex:int = 0;
+		private var autoSkillEnabled:Object = {};
+		private var autoSkillOrder:Array = [1, 2, 3, 4, 5, 6];
 
 		private function build():void {
 			addSkillButton("1", 0, 0, 1);
@@ -63,6 +66,7 @@ package ui {
 			addChild(ab);
 			btns.push(ab);
 			skillByBtn[ab] = skillIdx;
+			btnBySkill[skillIdx] = ab;
 		}
 
 		private function addEmptyButton(col:int, row:int):void {
@@ -79,6 +83,11 @@ package ui {
 			const idx:int = int(skillByBtn[btn]);
 			if (idx <= 0) return;
 
+			if (autoActive) {
+				toggleAutoSkill(idx);
+				return;
+			}
+
 			fireSkill(idx);
 		}
 
@@ -91,10 +100,12 @@ package ui {
 			autoBtn.setToggled(autoActive);
 
 			if (autoActive) {
+				setAllAutoSkills(true);
 				autoSkillIndex = 0;
 				autoTimer.start();
 			} else {
 				autoTimer.stop();
+				setAllAutoSkills(false);
 			}
 		}
 
@@ -103,9 +114,41 @@ package ui {
 
 			try { game.world.approachTarget(); } catch (e1:Error) {}
 
-			var skills:Array = [2, 3, 4, 5];
-			fireSkill(skills[autoSkillIndex % skills.length]);
+			const skills:Array = getEnabledAutoSkills();
+			if (skills.length == 0) {
+				return;
+			}
+
+			fireSkill(int(skills[autoSkillIndex % skills.length]));
 			autoSkillIndex++;
+		}
+
+		private function toggleAutoSkill(idx:int):void {
+			autoSkillEnabled[idx] = !(autoSkillEnabled[idx] === true);
+			if (btnBySkill[idx] != null) {
+				AttackButton(btnBySkill[idx]).setToggled(autoSkillEnabled[idx] === true);
+			}
+		}
+
+		private function setAllAutoSkills(enabled:Boolean):void {
+			for each (var idx:int in autoSkillOrder) {
+				autoSkillEnabled[idx] = enabled;
+				if (btnBySkill[idx] != null) {
+					AttackButton(btnBySkill[idx]).setToggled(enabled);
+				}
+			}
+		}
+
+		private function getEnabledAutoSkills():Array {
+			const result:Array = [];
+
+			for each (var idx:int in autoSkillOrder) {
+				if (autoSkillEnabled[idx] === true) {
+					result.push(idx);
+				}
+			}
+
+			return result;
 		}
 
 		private function fireSkill(idx:int):void {
