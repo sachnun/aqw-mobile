@@ -69,8 +69,24 @@ jobs:
           sed -i "s|<versionNumber>.*</versionNumber>|<versionNumber>${{ steps.version.outputs.APP_VERSION }}</versionNumber>|" loader/app.xml
           sed -i "s|<versionLabel>.*</versionLabel>|<versionLabel>${{ steps.version.outputs.TAG_VERSION }}</versionLabel>|" loader/app.xml
 
-      - name: Build APKs
-        run: ./scripts/build-apk.sh
+      - name: Build AAB
+        run: ./scripts/build-apk.sh --target-aab
+
+      - name: Build universal APK from AAB
+        run: |
+          BUNDLETOOL_JAR="bundletool.jar"
+          curl -L -o "$BUNDLETOOL_JAR" "https://github.com/google/bundletool/releases/download/1.18.2/bundletool-all-1.18.2.jar"
+
+          java -jar "$BUNDLETOOL_JAR" build-apks \
+            --bundle=AQWPocket.aab \
+            --output=AQWPocket.apks \
+            --mode=universal \
+            --ks=temp_keystore.jks \
+            --ks-key-alias=tempalias \
+            --ks-pass=pass:temppass \
+            --key-pass=pass:temppass
+
+          unzip -p AQWPocket.apks universal.apk > AQWPocket-universal-${{ steps.version.outputs.TAG_VERSION }}.apk
 
       - name: Tag release
         run: |
@@ -84,5 +100,4 @@ jobs:
           name: ${{ steps.version.outputs.TAG_VERSION }}
           prerelease: false
           files: |
-            AQWPocket-armv7.apk
-            AQWPocket-armv8.apk
+            AQWPocket-universal-${{ steps.version.outputs.TAG_VERSION }}.apk
