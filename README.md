@@ -33,9 +33,12 @@ cd aqw-pocket
 Optional:
 
 ```bash
-./scripts/build-apk.sh armv8
-SKIP_PATCH=1 ./scripts/build-apk.sh armv8
-SKIP_ANE=1 ./scripts/build-apk.sh armv8
+bash "scripts/build-apk.sh" --help
+Usage: ./scripts/build-apk.sh [--skip-patch] [--skip-ane] [armv7] [armv8]
+Options:
+  --skip-patch  Skip Game.swf patching step
+  --skip-ane    Skip background ANE rebuild step
+  -h, --help    Show this help message
 ```
 
 Manual builds are also available via [GitHub Actions](../../actions).
