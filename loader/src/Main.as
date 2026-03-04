@@ -57,6 +57,7 @@ package {
 		private var backgroundFile:String;
 		private var loadState:int = STATE_BACKGROUND;
 		private var foregroundService:ForegroundService;
+		private var isForegroundServiceRunning:Boolean = false;
 		private var lastBackPressAt:int = -BACK_EXIT_WINDOW_MS;
 		private var backgroundAudioMuted:Boolean = false;
 		private var masterVolumeBeforeBackground:Number = 1.0;
@@ -66,7 +67,6 @@ package {
 		public function Main() {
 			foregroundService = new ForegroundService();
 			const permissionRequested:Boolean = foregroundService.requestNotificationPermission();
-			const foregroundActive:Boolean = foregroundService.start();
 
 			NativeApplication.nativeApplication.systemIdleMode = SystemIdleMode.KEEP_AWAKE;
 			NativeApplication.nativeApplication.autoExit = false;
@@ -113,9 +113,6 @@ package {
 			if (!permissionRequested) {
 				log("Notification permission request unavailable");
 			}
-			if (!foregroundActive) {
-				log("Foreground service unavailable");
-			}
 
 			checkForUpdates();
 
@@ -133,6 +130,7 @@ package {
 
 			if (foregroundService != null) {
 				foregroundService.stop();
+				isForegroundServiceRunning = false;
 				foregroundService.dispose();
 				foregroundService = null;
 			}
@@ -140,12 +138,34 @@ package {
 
 		private function onAppActivate(e:Event):void {
 			NativeApplication.nativeApplication.systemIdleMode = SystemIdleMode.KEEP_AWAKE;
+			stopForegroundServiceIfRunning();
 			restoreAudioAfterForeground();
 		}
 
 		private function onAppDeactivate(e:Event):void {
 			NativeApplication.nativeApplication.systemIdleMode = SystemIdleMode.NORMAL;
+			startForegroundServiceIfNeeded();
 			muteAudioForBackground();
+		}
+
+		private function startForegroundServiceIfNeeded():void {
+			if (foregroundService == null || isForegroundServiceRunning) {
+				return;
+			}
+
+			isForegroundServiceRunning = foregroundService.start();
+			if (!isForegroundServiceRunning) {
+				log("Foreground service unavailable");
+			}
+		}
+
+		private function stopForegroundServiceIfRunning():void {
+			if (foregroundService == null || !isForegroundServiceRunning) {
+				return;
+			}
+
+			foregroundService.stop();
+			isForegroundServiceRunning = false;
 		}
 
 		private function muteAudioForBackground():void {
