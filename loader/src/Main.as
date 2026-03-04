@@ -8,6 +8,7 @@ package {
 	import flash.display.Sprite;
 	import flash.events.Event;
 	import flash.events.IOErrorEvent;
+	import flash.events.KeyboardEvent;
 	import flash.events.ProgressEvent;
 	import flash.net.URLLoader;
 	import flash.net.URLLoaderDataFormat;
@@ -17,7 +18,9 @@ package {
 	import flash.text.TextField;
 	import flash.text.TextFormat;
 	import flash.text.TextFormatAlign;
+	import flash.ui.Keyboard;
 	import flash.utils.ByteArray;
+	import flash.utils.getTimer;
 
 	import ui.UpdateBanner;
 	import input.GamePad;
@@ -39,6 +42,7 @@ package {
 		private static const STATE_BACKGROUND:int = 0;
 		private static const STATE_GAME:int = 1;
 		private static const STATE_READY:int = 2;
+		private static const BACK_EXIT_WINDOW_MS:int = 1800;
 
 		private var loading:TextField;
 		private var logField:TextField;
@@ -51,6 +55,7 @@ package {
 		private var backgroundFile:String;
 		private var loadState:int = STATE_BACKGROUND;
 		private var foregroundService:ForegroundService;
+		private var lastBackPressAt:int = -BACK_EXIT_WINDOW_MS;
 
 		private var container: Sprite = new Sprite();
 
@@ -65,6 +70,7 @@ package {
 			NativeApplication.nativeApplication.addEventListener(Event.ACTIVATE, onAppActivate);
 			NativeApplication.nativeApplication.addEventListener(Event.DEACTIVATE, onAppDeactivate);
 			NativeApplication.nativeApplication.addEventListener(Event.EXITING, onAppExiting);
+			addEventListener(Event.ADDED_TO_STAGE, onAddedToStage, false, 0, true);
 
 			addChild(container);
 
@@ -116,6 +122,10 @@ package {
 			NativeApplication.nativeApplication.removeEventListener(Event.ACTIVATE, onAppActivate);
 			NativeApplication.nativeApplication.removeEventListener(Event.DEACTIVATE, onAppDeactivate);
 			NativeApplication.nativeApplication.removeEventListener(Event.EXITING, onAppExiting);
+			if (stage != null) {
+				stage.removeEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
+			}
+			NativeApplication.nativeApplication.systemIdleMode = SystemIdleMode.NORMAL;
 
 			if (foregroundService != null) {
 				foregroundService.stop();
@@ -130,6 +140,33 @@ package {
 
 		private function onAppDeactivate(e:Event):void {
 			NativeApplication.nativeApplication.systemIdleMode = SystemIdleMode.NORMAL;
+		}
+
+		private function onAddedToStage(e:Event):void {
+			removeEventListener(Event.ADDED_TO_STAGE, onAddedToStage);
+			if (stage != null) {
+				stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown, false, 0, true);
+			}
+		}
+
+		private function onKeyDown(e:KeyboardEvent):void {
+			if (e.keyCode != Keyboard.BACK) {
+				return;
+			}
+
+			e.preventDefault();
+			e.stopImmediatePropagation();
+
+			const now:int = getTimer();
+			if (now - lastBackPressAt <= BACK_EXIT_WINDOW_MS) {
+				NativeApplication.nativeApplication.exit();
+				return;
+			}
+
+			lastBackPressAt = now;
+			if (foregroundService != null) {
+				foregroundService.showToast("Back again to exit");
+			}
 		}
 
 		private function log(msg:String):void {

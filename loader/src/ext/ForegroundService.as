@@ -30,6 +30,13 @@ package ext {
             return Boolean(ctx.call("stopService"));
         }
 
+        public function showToast(message:String):Boolean {
+            if (ctx == null) {
+                return false;
+            }
+            return Boolean(ctx.call("showToast", message));
+        }
+
         public function dispose():void {
             if (ctx != null) {
                 ctx.dispose();

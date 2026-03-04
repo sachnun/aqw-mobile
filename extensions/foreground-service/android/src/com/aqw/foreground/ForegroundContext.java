@@ -17,6 +17,7 @@ public class ForegroundContext extends FREContext {
         functions.put("requestNotificationPermission", new RequestNotificationPermissionFunction());
         functions.put("startService", new StartServiceFunction());
         functions.put("stopService", new StopServiceFunction());
+        functions.put("showToast", new ShowToastFunction());
         return functions;
     }
 }
