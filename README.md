@@ -60,9 +60,6 @@ cp assets/Game.swf loader/gamefiles/Game.swf
 # Compile the loader
 amxmlc -output loader/Loader.swf loader/src/Main.as
 
-# Build foreground-service ANE (required for stable background mode)
-./scripts/build-foreground-ane.sh
-
 # Generate a keystore (first time only)
 keytool -genkeypair -alias myalias -keyalg RSA -keysize 2048 -validity 10000 \
   -keystore keystore.jks -storepass yourpass -keypass yourpass \

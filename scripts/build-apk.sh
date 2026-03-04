@@ -3,6 +3,13 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 AIR_HOME="${AIR_HOME:-/usr/local/bin/air_sdk}"
+EXT_DIR="$ROOT_DIR/extensions/foreground-service"
+ANE_BUILD_DIR="$EXT_DIR/build"
+ANDROID_CLASSES_DIR="$ANE_BUILD_DIR/android/classes"
+ANDROID_DIST_DIR="$ANE_BUILD_DIR/android-dist"
+ANDROID_RES_DIR="$EXT_DIR/android/res"
+COMPILER_CLASSPATH="$AIR_HOME/lib/android/FlashRuntimeExtensions.jar"
+ANDROID_JAR="${ANDROID_JAR:-/root/android-sdk/platforms/android-10/android.jar}"
 
 APP_XML="$ROOT_DIR/loader/app.xml"
 LOADER_SWF="$ROOT_DIR/loader/Loader.swf"
@@ -30,12 +37,85 @@ require_cmd() {
   fi
 }
 
+build_foreground_ane() {
+  mkdir -p "$ANE_BUILD_DIR/as3/ext" "$ANDROID_CLASSES_DIR" "$ANDROID_DIST_DIR" "$ROOT_DIR/loader/extensions"
+
+  rm -rf "$ANDROID_DIST_DIR/res"
+  if [[ -d "$ANDROID_RES_DIR" ]]; then
+    cp -R "$ANDROID_RES_DIR" "$ANDROID_DIST_DIR/res"
+  fi
+
+  cp "$ROOT_DIR/loader/src/ext/ForegroundService.as" "$ANE_BUILD_DIR/as3/ext/ForegroundService.as"
+
+  "$AIR_HOME/bin/compc" \
+    -source-path "$ANE_BUILD_DIR/as3" \
+    -include-classes ext.ForegroundService \
+    -swf-version=23 \
+    -output "$ANE_BUILD_DIR/foreground-service.swc"
+
+  javac --release 8 \
+    -cp "$ANDROID_JAR:$COMPILER_CLASSPATH" \
+    -d "$ANDROID_CLASSES_DIR" \
+    "$EXT_DIR/android/src/com/aqw/foreground/"*.java
+
+  jar cf "$ANE_BUILD_DIR/foreground-ext.jar" -C "$ANDROID_CLASSES_DIR" .
+
+  PY_SWC="$ANE_BUILD_DIR/foreground-service.swc" \
+  PY_LIB_SWF="$ANDROID_DIST_DIR/library.swf" \
+  python - <<'PY'
+import os
+import zipfile
+import zlib
+
+swc = os.environ["PY_SWC"]
+out = os.environ["PY_LIB_SWF"]
+with zipfile.ZipFile(swc) as z:
+    data = z.read("library.swf")
+if data[:3] == b"CWS":
+    body = zlib.decompress(data[8:])
+    data = b"FWS" + bytes([data[3]]) + data[4:8] + body
+with open(out, "wb") as f:
+    f.write(data)
+PY
+
+  cp "$ANE_BUILD_DIR/foreground-ext.jar" "$ANDROID_DIST_DIR/foreground-ext.jar"
+  cp "$EXT_DIR/extension.xml" "$ANE_BUILD_DIR/extension.xml"
+  cp "$EXT_DIR/platform-android.xml" "$ANDROID_DIST_DIR/platform.xml"
+
+  "$AIR_HOME/bin/adt" -package -target ane \
+    "$ANE_BUILD_DIR/foreground-service.ane" \
+    "$ANE_BUILD_DIR/extension.xml" \
+    -swc "$ANE_BUILD_DIR/foreground-service.swc" \
+    -platform Android-ARM \
+    -platformoptions "$ANDROID_DIST_DIR/platform.xml" \
+    -C "$ANDROID_DIST_DIR" foreground-ext.jar library.swf res \
+    -platform Android-ARM64 \
+    -platformoptions "$ANDROID_DIST_DIR/platform.xml" \
+    -C "$ANDROID_DIST_DIR" foreground-ext.jar library.swf res
+
+  cp "$ANE_BUILD_DIR/foreground-service.ane" "$ROOT_DIR/loader/extensions/foreground-service.ane"
+}
+
 require_cmd cargo
 require_cmd keytool
+require_cmd javac
+require_cmd jar
+require_cmd python
 
 if [[ ! -x "$AIR_HOME/bin/amxmlc" || ! -x "$AIR_HOME/bin/adt" ]]; then
   echo "AIR SDK not found at: $AIR_HOME"
   echo "Set AIR_HOME to your AIR SDK path."
+  exit 1
+fi
+
+if [[ ! -x "$AIR_HOME/bin/compc" ]]; then
+  echo "Missing compc in AIR SDK at: $AIR_HOME/bin/compc"
+  exit 1
+fi
+
+if [[ "$SKIP_ANE" != "1" && ! -f "$ANDROID_JAR" ]]; then
+  echo "Missing android.jar: $ANDROID_JAR"
+  echo "Set ANDROID_JAR=/path/to/android.jar and run again."
   exit 1
 fi
 
@@ -59,7 +139,7 @@ cp "$GAME_SWF" "$GAME_SWF_IN_LOADER"
 
 if [[ "$SKIP_ANE" != "1" ]]; then
   echo "[3/5] Building foreground-service ANE..."
-  "$ROOT_DIR/scripts/build-foreground-ane.sh"
+  build_foreground_ane
 else
   echo "[3/5] Skip ANE rebuild (SKIP_ANE=1)"
 fi
