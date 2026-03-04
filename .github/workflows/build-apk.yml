@@ -257,5 +257,6 @@ jobs:
           tag_name: ${{ needs.prepare.outputs.tag_version }}
           name: ${{ needs.prepare.outputs.tag_version }}
           prerelease: false
+          generate_release_notes: true
           files: |
             build/${{ needs.build_universal.outputs.apk_name }}
