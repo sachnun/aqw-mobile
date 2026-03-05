@@ -24,6 +24,9 @@ package {
 	import flash.utils.ByteArray;
 	import flash.utils.getTimer;
 
+	import core.AvatarMC;
+	import core.Game;
+
 	import ui.UpdateBanner;
 	import input.GamePad;
 	import ext.ForegroundService;
@@ -64,6 +67,9 @@ package {
 		private var masterVolumeBeforeBackground:Number = 1.0;
 
 		private var container: Sprite = new Sprite();
+
+		public const avatarMCCore: AvatarMC = new AvatarMC(this);
+		public const gameCore: Game = new Game(this);
 
 		public function Main() {
 			foregroundService = new ForegroundService();
