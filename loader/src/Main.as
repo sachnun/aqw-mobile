@@ -347,6 +347,10 @@ package {
 		}
 
 		private function checkForUpdates():void {
+			if (Config.APP_VERSION == "") {
+				log("Dev build — skipping update check");
+				return;
+			}
 			log("Checking for updates...");
 			fetchJSON(Config.GITHUB_RELEASES_URL, onUpdateCheckComplete);
 		}

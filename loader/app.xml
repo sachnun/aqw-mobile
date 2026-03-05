@@ -2,7 +2,7 @@
 <application xmlns="http://ns.adobe.com/air/application/51.0">
   <id>com.aqw.pocket</id>
   <versionNumber>1.0.0</versionNumber>
-  <versionLabel>1.0.0</versionLabel>
+  <versionLabel>dev</versionLabel>
   <filename>AQW Pocket</filename>
   <description>Play AdventureQuest Worlds on your mobile device.</description>
   <name>AQW Pocket</name>
