@@ -8,6 +8,7 @@ package input {
 	import ui.SkillBar;
 	import bot.ui.BotPanel;
 	import bot.ui.CellPanel;
+	import bot.ui.MapIntelPanel;
 
 	public class GamePad extends Sprite {
 
@@ -30,6 +31,7 @@ package input {
 		private var layout:Layout;
 		private var botPanel:BotPanel;
 		private var cellPanel:CellPanel;
+		private var mapIntelPanel:MapIntelPanel;
 		private var gearBtn:Sprite;
 		private var dropdown:Sprite;
 		private var dropdownOpen:Boolean = false;
@@ -71,6 +73,10 @@ package input {
 				{
 					label: "Cell Jump",
 					fn: doCellJump
+				},
+				{
+					label: "Map Intel",
+					fn: doMapIntel
 				},
 				{
 					label: "Edit Layout",
@@ -177,13 +183,25 @@ package input {
 		private function doEditLayout():void {
 			layout.toggleEdit();
 
-			const row:Sprite = Sprite(dropdown.getChildAt(3));
+			const row:Sprite = Sprite(dropdown.getChildAt(4));
 			const tf:TextField = TextField(row.getChildAt(1));
 			tf.text = layout.editMode ? "Save Layout" : "Edit Layout";
 		}
 
 		private function doResetLayout():void {
 			layout.resetToDefaults();
+		}
+
+		private function doMapIntel():void {
+			if (mapIntelPanel == null) {
+				mapIntelPanel = new MapIntelPanel();
+				mapIntelPanel.visible = false;
+				addChild(mapIntelPanel);
+			}
+			mapIntelPanel.visible = !mapIntelPanel.visible;
+			if (mapIntelPanel.visible) {
+				mapIntelPanel.refresh();
+			}
 		}
 
 		private function doBotPanel():void {
