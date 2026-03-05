@@ -38,8 +38,6 @@ package bot.ui {
 		// UI elements that need updating
 		private var hidePlayersBtn:Sprite;
 		private var hidePlayersLabel:TextField;
-		private var disableFXBtn:Sprite;
-		private var disableFXLabel:TextField;
 		private var disableCollBtn:Sprite;
 		private var disableCollLabel:TextField;
 		private var killLagBtn:Sprite;
@@ -114,26 +112,16 @@ package bot.ui {
 			hidePlayersBtn.y = yOff;
 			content.addChild(hidePlayersBtn);
 
-			var fxResult:Object = makeToggleButton("Disable FX", halfW, function ():void {
-				BotController.toggleDisableFX();
-				updateModuleBtns();
-			});
-			disableFXBtn = fxResult.btn;
-			disableFXLabel = fxResult.label;
-			disableFXBtn.x = MARGIN + halfW + 4;
-			disableFXBtn.y = yOff;
-			content.addChild(disableFXBtn);
-			yOff += ROW_H + 2;
-
 			var dcResult:Object = makeToggleButton("No Collision", halfW, function ():void {
 				BotController.toggleDisableCollisions();
 				updateModuleBtns();
 			});
 			disableCollBtn = dcResult.btn;
 			disableCollLabel = dcResult.label;
-			disableCollBtn.x = MARGIN;
+			disableCollBtn.x = MARGIN + halfW + 4;
 			disableCollBtn.y = yOff;
 			content.addChild(disableCollBtn);
+			yOff += ROW_H + 2;
 
 			var klResult:Object = makeToggleButton("Kill Lag", halfW, function ():void {
 				killLagEnabled = !killLagEnabled;
@@ -142,7 +130,7 @@ package bot.ui {
 			});
 			killLagBtn = klResult.btn;
 			killLagLabel = klResult.label;
-			killLagBtn.x = MARGIN + halfW + 4;
+			killLagBtn.x = MARGIN;
 			killLagBtn.y = yOff;
 			content.addChild(killLagBtn);
 			yOff += ROW_H + 6;
@@ -157,10 +145,6 @@ package bot.ui {
 			var hp:Boolean = BotController.isHidePlayersEnabled();
 			hidePlayersLabel.textColor = hp ? COL_ACCENT : COL_TEXT;
 			drawBtnBg(hidePlayersBtn, halfW, hp ? COL_BTN_ACTIVE : COL_BTN);
-
-			var fx:Boolean = BotController.isDisableFXEnabled();
-			disableFXLabel.textColor = fx ? COL_ACCENT : COL_TEXT;
-			drawBtnBg(disableFXBtn, halfW, fx ? COL_BTN_ACTIVE : COL_BTN);
 
 			var dc:Boolean = BotController.isDisableCollisionsEnabled();
 			disableCollLabel.textColor = dc ? COL_ACCENT : COL_TEXT;

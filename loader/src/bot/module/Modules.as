@@ -97,7 +97,7 @@ package bot.module {
 			registerModule(new QuestItemRates());
 			registerModule(new HidePlayers());
 			registerModule(new DisableCollisions());
-			registerModule(new DisableFX());
+	
 		}
 
 		/** Disable all modules and clear registry */

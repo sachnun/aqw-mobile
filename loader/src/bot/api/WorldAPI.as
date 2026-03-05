@@ -12,8 +12,6 @@ package bot.api {
 	 */
 	public class WorldAPI {
 
-		private static var _fxStore:Object = {};
-		private static var _fxLastOpt:Boolean = false;
 		private static const PAD_NAMES_REGEX:RegExp = /(Spawn|Center|Left|Right|Up|Down|Top|Bottom)/;
 
 		/**
@@ -131,30 +129,6 @@ package bot.api {
 						avatar.hideMC();
 					} else if (avatar.strFrame == currentFrame) {
 						avatar.showMC();
-					}
-				}
-			}
-		}
-
-		/**
-		 * Toggle visual effects on all avatars.
-		 * Stores/restores FX references when toggling.
-		 */
-		public static function disableFX(enabled:Boolean):void {
-			if (!_fxLastOpt && enabled) {
-				_fxStore = {};
-			}
-			_fxLastOpt = enabled;
-
-			for each (var avatar:* in GameAccessor.game.world.avatars) {
-				if (enabled) {
-					if (avatar.pMC != null && avatar.pMC.spFX != null) {
-						_fxStore[avatar.uid] = avatar.rootClass.spFX;
-					}
-					avatar.rootClass.spFX = null;
-				} else {
-					if (_fxStore[avatar.uid] !== undefined) {
-						avatar.rootClass.spFX = _fxStore[avatar.uid];
 					}
 				}
 			}

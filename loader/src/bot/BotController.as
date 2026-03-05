@@ -235,20 +235,12 @@ package bot {
 			return Modules.toggle("HidePlayers");
 		}
 
-		public static function toggleDisableFX():Boolean {
-			return Modules.toggle("DisableFX");
-		}
-
 		public static function toggleDisableCollisions():Boolean {
 			return Modules.toggle("DisableCollisions");
 		}
 
 		public static function isHidePlayersEnabled():Boolean {
 			return Modules.isEnabled("HidePlayers");
-		}
-
-		public static function isDisableFXEnabled():Boolean {
-			return Modules.isEnabled("DisableFX");
 		}
 
 		public static function isDisableCollisionsEnabled():Boolean {
@@ -306,7 +298,7 @@ package bot {
 				autoAttackTarget: _autoAttackTarget,
 				autoHunt: _autoHuntActive,
 				hidePlayers: Modules.isEnabled("HidePlayers"),
-				disableFX: Modules.isEnabled("DisableFX"),
+
 				disableCollisions: Modules.isEnabled("DisableCollisions"),
 				questItemRates: Modules.isEnabled("QuestItemRates"),
 				packetCapture: PacketHandler.isCapturing()
