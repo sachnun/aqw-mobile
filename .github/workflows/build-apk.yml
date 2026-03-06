@@ -197,10 +197,11 @@ jobs:
         run: rm -f "$KEYSTORE_PATH"
 
       - name: Upload universal APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.meta.outputs.artifact_name }}
           path: build/${{ steps.meta.outputs.apk_name }}
+          archive: false
           if-no-files-found: error
 
   inspect_artifact:
@@ -218,7 +219,7 @@ jobs:
           java-version: "17"
 
       - name: Download APK artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build_universal.outputs.artifact_name }}
           path: build
@@ -241,7 +242,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download APK artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build_universal.outputs.artifact_name }}
           path: build
@@ -252,11 +253,10 @@ jobs:
           git push origin ${{ needs.prepare.outputs.tag_version }} --force
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.prepare.outputs.tag_version }}
-          name: ${{ needs.prepare.outputs.tag_version }}
-          prerelease: false
-          generate_release_notes: true
-          files: |
-            build/${{ needs.build_universal.outputs.apk_name }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ needs.prepare.outputs.tag_version }}" \
+            "build/${{ needs.build_universal.outputs.apk_name }}" \
+            --title "${{ needs.prepare.outputs.tag_version }}" \
+            --generate-notes
