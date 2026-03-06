@@ -1,11 +1,15 @@
 /target
 /build
 /assets
+.cache-tools/
 .vscode/settings.json
 *.apk
 *.aab
 *.apks
 temp_keystore.jks
+.signing/
+signing.env
+signing.env.*
 extensions/background/build/
 loader/Loader.swf
 loader/gamefiles/

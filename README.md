@@ -18,7 +18,6 @@ Get the latest APK from [Releases](../../releases/latest).
 
 Requirements:
 
-- [DMD](https://dlang.org/download.html)
 - [RABCDAsm](https://github.com/CyberShadow/RABCDAsm)
 - [Adobe AIR SDK (51.1+)](https://airsdk.harman.com/download)
 - [Java JDK](https://www.oracle.com/java/technologies/downloads/)
