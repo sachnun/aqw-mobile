@@ -46,6 +46,7 @@ Options:
 ```
 
 Manual builds are also available via [GitHub Actions](../../actions).
+Pull requests also upload preview APK artifacts in GitHub Actions for review.
 
 ## Contributing
 
