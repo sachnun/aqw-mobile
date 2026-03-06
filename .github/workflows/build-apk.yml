@@ -106,10 +106,11 @@ jobs:
           rm -rf RABCDAsm
           git clone --depth 1 https://github.com/CyberShadow/RABCDAsm.git
           cd RABCDAsm
-          gdmd -O -inline -version=HAVE_LZMA abcexport.d
-          gdmd -O -inline -version=HAVE_LZMA rabcdasm.d
-          gdmd -O -inline -version=HAVE_LZMA rabcasm.d
-          gdmd -O -inline -version=HAVE_LZMA abcreplace.d
+          GDMD_BIN="${DMD:-gdmd}"
+          "$GDMD_BIN" -O -inline -version=HAVE_LZMA abcexport.d
+          "$GDMD_BIN" -O -inline -version=HAVE_LZMA rabcdasm.d
+          "$GDMD_BIN" -O -inline -version=HAVE_LZMA rabcasm.d
+          "$GDMD_BIN" -O -inline -version=HAVE_LZMA abcreplace.d
           cd ..
 
           mkdir -p .cache-tools/rabcdasm/bin
