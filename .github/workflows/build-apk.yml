@@ -82,7 +82,7 @@ jobs:
       - name: Setup Dlang
         uses: dlang-community/setup-dlang@v2
         with:
-          compiler: gdc-12
+          compiler: dmd
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -95,7 +95,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .cache-tools/rabcdasm/bin
-          key: rabcdasm-${{ runner.os }}-gdc12-latest-v1
+          key: rabcdasm-${{ runner.os }}-dmd-latest-v1
 
       - name: Build and cache RABCDAsm
         if: steps.rabcdasm-cache.outputs.cache-hit != 'true'
@@ -106,11 +106,8 @@ jobs:
           rm -rf RABCDAsm
           git clone --depth 1 https://github.com/CyberShadow/RABCDAsm.git
           cd RABCDAsm
-          GDMD_BIN="${DMD:-gdmd}"
-          "$GDMD_BIN" -O -inline -version=HAVE_LZMA abcexport.d
-          "$GDMD_BIN" -O -inline -version=HAVE_LZMA rabcdasm.d
-          "$GDMD_BIN" -O -inline -version=HAVE_LZMA rabcasm.d
-          "$GDMD_BIN" -O -inline -version=HAVE_LZMA abcreplace.d
+          DMD_BIN="${DMD:-dmd}"
+          "$DMD_BIN" -run build_rabcdasm.d abcexport rabcdasm rabcasm abcreplace
           cd ..
 
           mkdir -p .cache-tools/rabcdasm/bin
