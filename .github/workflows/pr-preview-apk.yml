@@ -1,0 +1,227 @@
+name: PR Preview APK
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+  merge_group:
+
+concurrency:
+  group: pr-preview-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    name: Prepare Preview Metadata
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      app_version: ${{ steps.meta.outputs.app_version }}
+      tag_version: ${{ steps.meta.outputs.tag_version }}
+      artifact_name: ${{ steps.meta.outputs.artifact_name }}
+      apk_name: ${{ steps.meta.outputs.apk_name }}
+    steps:
+      - name: Compute preview metadata
+        id: meta
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MERGE_GROUP_SHA: ${{ github.event.merge_group.head_sha }}
+          RUN_NUMBER: ${{ github.run_number }}
+          GITHUB_SHA_VALUE: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            SHORT_SHA="${PR_HEAD_SHA:0:7}"
+            TAG_VERSION="pr-${PR_NUMBER}-${SHORT_SHA}"
+          else
+            HEAD_SHA="${MERGE_GROUP_SHA:-$GITHUB_SHA_VALUE}"
+            SHORT_SHA="${HEAD_SHA:0:7}"
+            TAG_VERSION="merge-group-${SHORT_SHA}"
+          fi
+
+          APP_VERSION="1.0.${RUN_NUMBER}"
+          APK_NAME="AQWPocket-${TAG_VERSION}.apk"
+          ARTIFACT_NAME="preview-apk-${TAG_VERSION}"
+
+          echo "app_version=${APP_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag_version=${TAG_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "apk_name=${APK_NAME}" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=${ARTIFACT_NAME}" >> "$GITHUB_OUTPUT"
+
+  build_universal_preview:
+    name: Build Universal Preview APK
+    runs-on: ubuntu-latest
+    needs: prepare
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Dlang
+        uses: dlang-community/setup-dlang@v2
+        with:
+          compiler: dmd
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Restore RABCDAsm cache
+        id: rabcdasm-cache
+        uses: actions/cache@v4
+        with:
+          path: .cache-tools/rabcdasm/bin
+          key: rabcdasm-${{ runner.os }}-dmd-latest-v1
+
+      - name: Build and cache RABCDAsm
+        if: steps.rabcdasm-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git liblzma-dev
+
+          rm -rf RABCDAsm
+          git clone --depth 1 https://github.com/CyberShadow/RABCDAsm.git
+          cd RABCDAsm
+          DMD_BIN="${DMD:-dmd}"
+          "$DMD_BIN" -run build_rabcdasm.d abcexport rabcdasm rabcasm abcreplace
+          cd ..
+
+          mkdir -p .cache-tools/rabcdasm/bin
+          cp RABCDAsm/abcexport RABCDAsm/rabcdasm RABCDAsm/rabcasm RABCDAsm/abcreplace .cache-tools/rabcdasm/bin/
+
+      - name: Add RABCDAsm to PATH
+        run: echo "${GITHUB_WORKSPACE}/.cache-tools/rabcdasm/bin" >> "$GITHUB_PATH"
+
+      - name: Prepare Android platform
+        run: |
+          ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/bin/sdkmanager"
+          fi
+          "$SDKMANAGER" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          echo "ANDROID_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
+
+      - name: Setup AIR SDK
+        uses: joshtynjala/setup-adobe-air-action@v2.3.0
+        with:
+          air-version: "51.1.4.1"
+          accept-license: yes
+
+      - name: Generate preview signing keystore
+        run: |
+          KEYSTORE_PATH="$RUNNER_TEMP/pr-preview.jks"
+          KEYSTORE_PASS="previewpass"
+          KEY_ALIAS="preview"
+
+          keytool -genkeypair \
+            -alias "$KEY_ALIAS" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 3650 \
+            -keystore "$KEYSTORE_PATH" \
+            -storepass "$KEYSTORE_PASS" \
+            -keypass "$KEYSTORE_PASS" \
+            -dname "CN=AQW Pocket Preview, OU=CI, O=GitHub Actions, L=Unknown, S=Unknown, C=US"
+
+          echo "KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASS=$KEYSTORE_PASS" >> "$GITHUB_ENV"
+          echo "KEY_PASS=$KEYSTORE_PASS" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+
+      - name: Inject preview version into source files
+        run: |
+          sed -i "s/APP_VERSION:String = \".*\"/APP_VERSION:String = \"${{ needs.prepare.outputs.tag_version }}\"/" loader/src/Config.as
+          sed -i "s|<versionNumber>.*</versionNumber>|<versionNumber>${{ needs.prepare.outputs.app_version }}</versionNumber>|" loader/app.xml
+          sed -i "s|<versionLabel>.*</versionLabel>|<versionLabel>${{ needs.prepare.outputs.tag_version }}</versionLabel>|" loader/app.xml
+
+      - name: Build AAB preview
+        run: ./scripts/build-apk.sh --target-aab
+
+      - name: Normalize AAB native library compression
+        run: |
+          java scripts/BuildTools.java normalize-aab build/AQWPocket.aab build/AQWPocket-normalized.aab
+
+      - name: Restore bundletool cache
+        id: bundletool-cache
+        uses: actions/cache@v4
+        with:
+          path: .cache-tools/bundletool/bundletool-all-1.18.2.jar
+          key: bundletool-1.18.2
+
+      - name: Download bundletool
+        if: steps.bundletool-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .cache-tools/bundletool
+          curl -L -o .cache-tools/bundletool/bundletool-all-1.18.2.jar "https://github.com/google/bundletool/releases/download/1.18.2/bundletool-all-1.18.2.jar"
+
+      - name: Build universal APK from normalized AAB
+        run: |
+          java -jar .cache-tools/bundletool/bundletool-all-1.18.2.jar build-apks \
+            --bundle=build/AQWPocket-normalized.aab \
+            --output=build/AQWPocket.apks \
+            --mode=universal \
+            --ks="$KEYSTORE_PATH" \
+            --ks-key-alias="$KEY_ALIAS" \
+            --ks-pass=pass:"$KEYSTORE_PASS" \
+            --key-pass=pass:"$KEY_PASS"
+
+          unzip -p build/AQWPocket.apks universal.apk > "build/${{ needs.prepare.outputs.apk_name }}"
+          rm -f build/AQWPocket.apks build/AQWPocket-normalized.aab
+
+      - name: Upload preview APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ needs.prepare.outputs.artifact_name }}
+          path: build/${{ needs.prepare.outputs.apk_name }}
+          if-no-files-found: error
+          retention-days: 7
+
+  inspect_preview_artifact:
+    name: Inspect Preview Artifact
+    runs-on: ubuntu-latest
+    needs: [prepare, build_universal_preview]
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Download preview APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.prepare.outputs.artifact_name }}
+          path: build
+
+      - name: Print APK size and native library compression
+        run: |
+          java scripts/BuildTools.java inspect-native-libs "build/${{ needs.prepare.outputs.apk_name }}"
+
+  preview_status:
+    name: PR Preview APK
+    runs-on: ubuntu-latest
+    needs: [build_universal_preview, inspect_preview_artifact]
+    if: always()
+    steps:
+      - name: Fail when preview pipeline fails
+        run: |
+          if [ "${{ needs.build_universal_preview.result }}" != "success" ] || [ "${{ needs.inspect_preview_artifact.result }}" != "success" ]; then
+            echo "Preview APK build failed."
+            exit 1
+          fi
+
+          echo "Preview APK build succeeded."
