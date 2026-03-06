@@ -98,6 +98,12 @@ jobs:
             }
 
             const issueNumber = linkedPr.number;
+            const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: run.id,
+              per_page: 100,
+            });
             const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -117,6 +123,7 @@ jobs:
             });
 
             const artifact = artifactData.artifacts.find((item) => item.name.startsWith('preview-apk-'));
+            const buildJob = jobs.jobs.find((job) => job.name === 'Build Universal Preview APK');
             const shortSha = run.head_sha.slice(0, 7);
             const statusMap = {
               success: 'Ready',
@@ -128,6 +135,7 @@ jobs:
             const conclusion = run.conclusion || 'neutral';
             const statusText = statusMap[conclusion] || 'Completed';
             const runUrl = run.html_url;
+            const buildUrl = buildJob ? buildJob.html_url : runUrl;
             const artifactUrl = artifact
               ? `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${run.id}/artifacts/${artifact.id}`
               : null;
@@ -141,8 +149,8 @@ jobs:
                 '**Status:** Ready',
                 `Commit: \`${shortSha}\``,
                 '',
-                `- Download APK: ${artifactUrl}`,
-                `- Build log: ${runUrl}`,
+                `- [Download APK](${artifactUrl})`,
+                `- [Build log](${buildUrl})`,
                 '- Merge gate: `PR Preview APK` passed',
                 '- Artifact expires in 7 days.',
                 '',
@@ -156,11 +164,11 @@ jobs:
                 `**Status:** ${statusText}`,
                 `Commit: \`${shortSha}\``,
                 '',
-                `- Build log: ${runUrl}`,
+                `- [Build log](${buildUrl})`,
               ];
 
               if (artifactUrl) {
-                bodyLines.push(`- Last artifact: ${artifactUrl}`);
+                bodyLines.push(`- [Last artifact](${artifactUrl})`);
               }
 
               bodyLines.push(

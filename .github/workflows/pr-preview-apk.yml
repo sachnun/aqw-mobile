@@ -178,10 +178,11 @@ jobs:
           rm -f build/AQWPocket.apks build/AQWPocket-normalized.aab
 
       - name: Upload preview APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ needs.prepare.outputs.artifact_name }}
           path: build/${{ needs.prepare.outputs.apk_name }}
+          archive: false
           if-no-files-found: error
           retention-days: 7
 
@@ -202,7 +203,7 @@ jobs:
           java-version: "17"
 
       - name: Download preview APK artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.prepare.outputs.artifact_name }}
           path: build
