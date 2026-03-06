@@ -82,7 +82,7 @@ jobs:
       - name: Setup Dlang
         uses: dlang-community/setup-dlang@v2
         with:
-          compiler: dmd
+          compiler: gdc-12
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -95,7 +95,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .cache-tools/rabcdasm/bin
-          key: rabcdasm-${{ runner.os }}-dmd2.112.0-v1
+          key: rabcdasm-${{ runner.os }}-gdc12-latest-v1
 
       - name: Build and cache RABCDAsm
         if: steps.rabcdasm-cache.outputs.cache-hit != 'true'
@@ -106,7 +106,10 @@ jobs:
           rm -rf RABCDAsm
           git clone --depth 1 https://github.com/CyberShadow/RABCDAsm.git
           cd RABCDAsm
-          dmd -run build_rabcdasm.d
+          gdmd -O -inline -version=HAVE_LZMA abcexport.d
+          gdmd -O -inline -version=HAVE_LZMA rabcdasm.d
+          gdmd -O -inline -version=HAVE_LZMA rabcasm.d
+          gdmd -O -inline -version=HAVE_LZMA abcreplace.d
           cd ..
 
           mkdir -p .cache-tools/rabcdasm/bin
@@ -132,6 +135,25 @@ jobs:
           air-version: "51.1.4.1"
           accept-license: yes
 
+      - name: Restore signing keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ]; then
+            echo "Missing Android signing secrets."
+            exit 1
+          fi
+
+          KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
+
+          echo "KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=$ANDROID_KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASS=$ANDROID_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "KEY_PASS=$ANDROID_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+
       - name: Inject version into source files
         run: |
           sed -i "s/APP_VERSION:String = \".*\"/APP_VERSION:String = \"${{ needs.prepare.outputs.tag_version }}\"/" loader/src/Config.as
@@ -143,26 +165,7 @@ jobs:
 
       - name: Normalize AAB native library compression
         run: |
-          python - <<'PY'
-          import zipfile
-
-          src = "build/AQWPocket.aab"
-          dst = "build/AQWPocket-normalized.aab"
-
-          with zipfile.ZipFile(src, "r") as zin, zipfile.ZipFile(dst, "w") as zout:
-              for info in zin.infolist():
-                  data = zin.read(info.filename)
-                  out = zipfile.ZipInfo(info.filename)
-                  out.date_time = info.date_time
-                  out.comment = info.comment
-                  out.extra = info.extra
-                  out.internal_attr = info.internal_attr
-                  out.external_attr = info.external_attr
-                  out.create_system = info.create_system
-                  out.flag_bits = info.flag_bits
-                  out.compress_type = zipfile.ZIP_DEFLATED if info.filename.endswith(".so") else info.compress_type
-                  zout.writestr(out, data)
-          PY
+          java scripts/BuildTools.java normalize-aab build/AQWPocket.aab build/AQWPocket-normalized.aab
 
       - name: Restore bundletool cache
         id: bundletool-cache
@@ -183,13 +186,17 @@ jobs:
             --bundle=build/AQWPocket-normalized.aab \
             --output=build/AQWPocket.apks \
             --mode=universal \
-            --ks=temp_keystore.jks \
-            --ks-key-alias=tempalias \
-            --ks-pass=pass:temppass \
-            --key-pass=pass:temppass
+            --ks="$KEYSTORE_PATH" \
+            --ks-key-alias="$KEY_ALIAS" \
+            --ks-pass=pass:"$KEYSTORE_PASS" \
+            --key-pass=pass:"$KEY_PASS"
 
           unzip -p build/AQWPocket.apks universal.apk > "build/${{ steps.meta.outputs.apk_name }}"
           rm -f build/AQWPocket.apks build/AQWPocket-normalized.aab
+
+      - name: Clean signing keystore
+        if: always()
+        run: rm -f "$KEYSTORE_PATH"
 
       - name: Upload universal APK artifact
         uses: actions/upload-artifact@v4
@@ -203,6 +210,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [prepare, build_universal]
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
       - name: Download APK artifact
         uses: actions/download-artifact@v4
         with:
@@ -211,21 +227,7 @@ jobs:
 
       - name: Print APK size and native library compression
         run: |
-          python - <<'PY'
-          import os
-          import zipfile
-
-          apk = "build/${{ needs.build_universal.outputs.apk_name }}"
-          size_mb = os.path.getsize(apk) / (1024 * 1024)
-          print(f"APK: {apk}")
-          print(f"Size: {size_mb:.2f} MiB")
-
-          with zipfile.ZipFile(apk) as z:
-              libs = [i for i in z.infolist() if i.filename.startswith("lib/") and i.filename.endswith(".so")]
-          for i in sorted(libs, key=lambda x: x.file_size, reverse=True):
-              method = "STORED" if i.compress_type == zipfile.ZIP_STORED else "DEFLATED"
-              print(f"{i.filename}: {method} ({i.compress_size}/{i.file_size})")
-          PY
+          java scripts/BuildTools.java inspect-native-libs "build/${{ needs.build_universal.outputs.apk_name }}"
 
   release:
     name: Publish Release

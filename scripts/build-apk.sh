@@ -18,10 +18,11 @@ GAME_SWF="$ROOT_DIR/assets/Game.swf"
 GAME_SWF_IN_LOADER="$ROOT_DIR/loader/gamefiles/Game.swf"
 ANE_PATH="$ROOT_DIR/loader/extensions/background.ane"
 
-KEYSTORE_PATH="${KEYSTORE_PATH:-$ROOT_DIR/temp_keystore.jks}"
-KEY_ALIAS="${KEY_ALIAS:-tempalias}"
-KEYSTORE_PASS="${KEYSTORE_PASS:-temppass}"
-KEY_PASS="${KEY_PASS:-$KEYSTORE_PASS}"
+TEMP_KEYSTORE_PATH="$ROOT_DIR/temp_keystore.jks"
+KEYSTORE_PATH="${KEYSTORE_PATH:-${KEYSTORE_FILE:-$TEMP_KEYSTORE_PATH}}"
+KEY_ALIAS="${KEY_ALIAS:-${KEYSTORE_ALIAS:-tempalias}}"
+KEYSTORE_PASS="${KEYSTORE_PASS:-${KEYSTORE_PASSWORD:-temppass}}"
+KEY_PASS="${KEY_PASS:-${KEY_PASSWORD:-$KEYSTORE_PASS}}"
 
 SKIP_PATCH="${SKIP_PATCH:-0}"
 SKIP_ANE="${SKIP_ANE:-0}"
@@ -128,23 +129,9 @@ build_foreground_ane() {
 
   jar cf "$ANE_BUILD_DIR/foreground-ext.jar" -C "$ANDROID_CLASSES_DIR" .
 
-  PY_SWC="$ANE_BUILD_DIR/background.swc" \
-  PY_LIB_SWF="$ANDROID_DIST_DIR/library.swf" \
-  python - <<'PY'
-import os
-import zipfile
-import zlib
-
-swc = os.environ["PY_SWC"]
-out = os.environ["PY_LIB_SWF"]
-with zipfile.ZipFile(swc) as z:
-    data = z.read("library.swf")
-if data[:3] == b"CWS":
-    body = zlib.decompress(data[8:])
-    data = b"FWS" + bytes([data[3]]) + data[4:8] + body
-with open(out, "wb") as f:
-    f.write(data)
-PY
+  java scripts/BuildTools.java extract-library-swf \
+    "$ANE_BUILD_DIR/background.swc" \
+    "$ANDROID_DIST_DIR/library.swf"
 
   cp "$ANE_BUILD_DIR/foreground-ext.jar" "$ANDROID_DIST_DIR/foreground-ext.jar"
   cp "$EXT_DIR/extension.xml" "$ANE_BUILD_DIR/extension.xml"
@@ -168,7 +155,6 @@ require_cmd java
 require_cmd keytool
 require_cmd javac
 require_cmd jar
-require_cmd python
 
 if [[ ! -x "$AIR_HOME/bin/amxmlc" || ! -x "$AIR_HOME/bin/adt" ]]; then
   echo "AIR SDK not found at: $AIR_HOME"
@@ -225,6 +211,12 @@ echo "[4/5] Compiling Loader.swf..."
   "$ROOT_DIR/loader/src/Main.as"
 
 if [[ ! -f "$KEYSTORE_PATH" ]]; then
+  if [[ -n "${CI:-}" || "$KEYSTORE_PATH" != "$TEMP_KEYSTORE_PATH" || "$KEY_ALIAS" != "tempalias" || "$KEYSTORE_PASS" != "temppass" || "$KEY_PASS" != "$KEYSTORE_PASS" ]]; then
+    echo "Missing keystore: $KEYSTORE_PATH"
+    echo "Provide KEYSTORE_PATH, KEY_ALIAS, and KEYSTORE_PASS for release signing."
+    exit 1
+  fi
+
   echo "[keystore] Creating temporary keystore: $KEYSTORE_PATH"
   keytool -genkeypair \
     -alias "$KEY_ALIAS" \
