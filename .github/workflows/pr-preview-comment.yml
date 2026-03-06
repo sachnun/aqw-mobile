@@ -141,8 +141,8 @@ jobs:
                 '**Status:** Ready',
                 `Commit: \`${shortSha}\``,
                 '',
-                `- Download APK: ${artifactUrl}`,
-                `- Build log: ${runUrl}`,
+                `- [Download APK](${artifactUrl})`,
+                `- [Build log](${runUrl})`,
                 '- Merge gate: `PR Preview APK` passed',
                 '- Artifact expires in 7 days.',
                 '',
@@ -156,11 +156,11 @@ jobs:
                 `**Status:** ${statusText}`,
                 `Commit: \`${shortSha}\``,
                 '',
-                `- Build log: ${runUrl}`,
+                `- [Build log](${runUrl})`,
               ];
 
               if (artifactUrl) {
-                bodyLines.push(`- Last artifact: ${artifactUrl}`);
+                bodyLines.push(`- [Last artifact](${artifactUrl})`);
               }
 
               bodyLines.push(
