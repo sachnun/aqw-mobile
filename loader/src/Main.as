@@ -26,6 +26,7 @@ package {
 
 	import core.AvatarMC;
 	import core.Game;
+	import core.World;
 
 	import ui.UpdateBanner;
 	import input.GamePad;
@@ -70,6 +71,11 @@ package {
 
 		public const avatarMCCore: AvatarMC = new AvatarMC(this);
 		public const gameCore: Game = new Game(this);
+		public const worldCore: World = new World(this);
+
+		public function get game():MovieClip {
+			return gameMovieClip;
+		}
 
 		public function Main() {
 			foregroundService = new ForegroundService();
@@ -132,6 +138,7 @@ package {
 			NativeApplication.nativeApplication.removeEventListener(Event.EXITING, onAppExiting);
 			if (stage != null) {
 				stage.removeEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
+				stage.removeEventListener(Event.ENTER_FRAME, worldCore.onZManagerEnterFrame);
 			}
 			NativeApplication.nativeApplication.systemIdleMode = SystemIdleMode.NORMAL;
 
@@ -345,6 +352,7 @@ package {
 
 			stage.setChildIndex(gameMovieClip, 0);
 			stage.removeChild(DisplayObject(this));
+			stage.addEventListener(Event.ENTER_FRAME, worldCore.onZManagerEnterFrame, false, 0, true);
 
 			gameMovieClip.addChild(new GamePad(gameMovieClip));
 
