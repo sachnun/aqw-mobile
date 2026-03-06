@@ -182,7 +182,6 @@ jobs:
         with:
           name: ${{ needs.prepare.outputs.artifact_name }}
           path: build/${{ needs.prepare.outputs.apk_name }}
-          archive: false
           if-no-files-found: error
           retention-days: 7
 
