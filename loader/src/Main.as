@@ -24,9 +24,13 @@ package {
 	import flash.utils.ByteArray;
 	import flash.utils.getTimer;
 
+	import core.AvatarMC;
+	import core.Game;
+
 	import ui.UpdateBanner;
 	import input.GamePad;
 	import ext.ForegroundService;
+	import bot.BotController;
 
 	[SWF(width="960", height="550", frameRate="30", backgroundColor="#000")]
 	public dynamic class Main extends MovieClip {
@@ -63,6 +67,9 @@ package {
 		private var masterVolumeBeforeBackground:Number = 1.0;
 
 		private var container: Sprite = new Sprite();
+
+		public const avatarMCCore: AvatarMC = new AvatarMC(this);
+		public const gameCore: Game = new Game(this);
 
 		public function Main() {
 			foregroundService = new ForegroundService();
@@ -340,9 +347,16 @@ package {
 			stage.removeChild(DisplayObject(this));
 
 			gameMovieClip.addChild(new GamePad(gameMovieClip));
+
+			BotController.init(gameMovieClip, stage);
+			log("Bot controller initialized");
 		}
 
 		private function checkForUpdates():void {
+			if (Config.APP_VERSION == "") {
+				log("Dev build — skipping update check");
+				return;
+			}
 			log("Checking for updates...");
 			fetchJSON(Config.GITHUB_RELEASES_URL, onUpdateCheckComplete);
 		}
